@@ -1,0 +1,284 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============= ENUMS =============
+
+enum UserRole {
+  REQUESTER
+  APPROVER
+  SECURITY_REVIEWER
+  AUDITOR
+  ADMIN
+}
+
+enum ExceptionStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_APPROVED
+  INFO_REQUESTED
+  ACTIVE
+  EXPIRED
+  REVOKED
+  REJECTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ApprovalRole {
+  MANAGER
+  SECURITY_REVIEWER
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  MORE_INFO
+}
+
+enum NotificationType {
+  APPROVAL_REQUIRED
+  EXPIRY_WARNING
+  OVERDUE
+  RENEWAL_REQUIRED
+  APPROVAL_CONFIRMED
+  REJECTED
+  INFO_REQUESTED
+}
+
+enum AnomalyType {
+  EXPIRED_BUT_ACTIVE
+  STALLED_REVIEW
+  LONG_RUNNING
+  MULTIPLE_PER_USER
+  EXCESSIVE_RENEWALS
+}
+
+enum AnomalySeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum PolicySeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ============= MODELS =============
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole
+  departmentId String?  @map("department_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  department    Department?     @relation(fields: [departmentId], references: [id])
+  exceptions    Exception[]     @relation("requester")
+  approvals     Approval[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@index([role])
+  @@index([departmentId])
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users      User[]
+  exceptions Exception[]
+  policies   Policy[]
+}
+
+model Policy {
+  id                String         @id @default(uuid())
+  policyCode        String         @unique @map("policy_code")
+  title             String
+  description       String?
+  ownerDepartmentId String         @map("owner_department_id")
+  severity          PolicySeverity @default(MEDIUM)
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  ownerDepartment Department  @relation(fields: [ownerDepartmentId], references: [id])
+  exceptions      Exception[]
+
+  @@index([severity])
+}
+
+model ExceptionType {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  baseRiskScore Int      @map("base_risk_score")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  exceptions          Exception[]
+  complianceJunctions ExceptionTypeCompliance[]
+}
+
+model ComplianceFramework {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  controlCode String   @map("control_code")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  exceptionTypes ExceptionTypeCompliance[]
+}
+
+model ExceptionTypeCompliance {
+  id              String @id @default(uuid())
+  exceptionTypeId String @map("exception_type_id")
+  frameworkId     String @map("framework_id")
+
+  exceptionType ExceptionType       @relation(fields: [exceptionTypeId], references: [id], onDelete: Cascade)
+  framework     ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@unique([exceptionTypeId, frameworkId])
+}
+
+model Exception {
+  id                    String          @id @default(uuid())
+  title                 String
+  description           String?
+  businessJustification String          @map("business_justification")
+  systemAffected        String          @map("system_affected")
+  policyId              String?         @map("policy_id")
+  exceptionTypeId       String          @map("exception_type_id")
+  requesterId           String          @map("requester_id")
+  departmentId          String          @map("department_id")
+  riskScore             Int             @default(0) @map("risk_score")
+  riskLevel             RiskLevel       @default(LOW) @map("risk_level")
+  status                ExceptionStatus @default(DRAFT)
+  startDate             DateTime?       @map("start_date")
+  expiryDate            DateTime?       @map("expiry_date")
+  renewalCount          Int             @default(0) @map("renewal_count")
+  isCritical            Boolean         @default(false) @map("is_critical")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  policy         Policy?         @relation(fields: [policyId], references: [id])
+  exceptionType  ExceptionType   @relation(fields: [exceptionTypeId], references: [id])
+  requester      User            @relation("requester", fields: [requesterId], references: [id])
+  department     Department      @relation(fields: [departmentId], references: [id])
+  approvals      Approval[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  riskAssessment RiskAssessment?
+  anomalyFlags   AnomalyFlag[]
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([expiryDate])
+  @@index([departmentId])
+  @@index([status, expiryDate])
+}
+
+model Approval {
+  id                String           @id @default(uuid())
+  exceptionId       String           @map("exception_id")
+  approverId        String?          @map("approver_id")
+  approvalRole      ApprovalRole     @map("approval_role")
+  decision          ApprovalDecision @default(PENDING)
+  comments          String?
+  overrideRiskScore Int?             @map("override_risk_score")
+  overrideReason    String?          @map("override_reason")
+  approvedAt        DateTime?        @map("approved_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  exception Exception @relation(fields: [exceptionId], references: [id], onDelete: Cascade)
+  approver  User?     @relation(fields: [approverId], references: [id])
+
+  @@index([exceptionId])
+  @@index([decision])
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  exceptionId String?          @map("exception_id")
+  type        NotificationType
+  message     String
+  isRead      Boolean          @default(false) @map("is_read")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exception Exception? @relation(fields: [exceptionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  exceptionId  String?  @map("exception_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  oldValue     Json?    @map("old_value")
+  newValue     Json?    @map("new_value")
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user      User?      @relation(fields: [userId], references: [id])
+  exception Exception? @relation(fields: [exceptionId], references: [id])
+
+  @@index([userId])
+  @@index([exceptionId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model RiskAssessment {
+  id              String    @id @default(uuid())
+  exceptionId     String    @unique @map("exception_id")
+  typeRisk        Int       @map("type_risk")
+  durationRisk    Int       @map("duration_risk")
+  renewalRisk     Int       @map("renewal_risk")
+  approvalBonus   Int       @default(0) @map("approval_bonus")
+  finalScore      Int       @map("final_score")
+  riskLevel       RiskLevel @map("risk_level")
+  assessmentNotes String?   @map("assessment_notes")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  exception Exception @relation(fields: [exceptionId], references: [id], onDelete: Cascade)
+}
+
+model AnomalyFlag {
+  id           String          @id @default(uuid())
+  exceptionId  String          @map("exception_id")
+  anomalyType  AnomalyType     @map("anomaly_type")
+  severity     AnomalySeverity
+  description  String
+  detectedAt   DateTime        @default(now()) @map("detected_at")
+  isResolved   Boolean         @default(false) @map("is_resolved")
+
+  exception Exception @relation(fields: [exceptionId], references: [id], onDelete: Cascade)
+
+  @@index([exceptionId])
+  @@index([isResolved])
+}
