@@ -1,12 +1,19 @@
+
+
+// REPLACE WITH (adds Download icon + Button import):
 import React, { useState, useEffect } from 'react'
-import { BarChart3, FileText, AlertTriangle, Building, Shield } from 'lucide-react'
+import { BarChart3, FileText, AlertTriangle, Building, Shield, Download } from 'lucide-react'
 import { reportsApi } from '../api/reports.js'
 import { Card, CardHeader } from '../components/ui/Card.jsx'
+import { Button } from '../components/ui/Button.jsx'
 import { RiskBadge, StatusBadge } from '../components/ui/Badge.jsx'
 import { Table } from '../components/ui/Table.jsx'
 import { PageSpinner } from '../components/ui/Form.jsx'
 import { RiskDistributionChart, DepartmentRiskChart, ComplianceImpactChart } from '../components/charts/Charts.jsx'
 import { formatDate } from '../utils/format.js'
+import { Badge } from '../components/ui/Badge.jsx'
+
+
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -15,12 +22,29 @@ const TABS = [
   { id: 'expired', label: 'Expired', icon: FileText },
   { id: 'department', label: 'By Department', icon: Building },
   { id: 'compliance', label: 'Compliance', icon: Shield },
+  { id: 'policy', label: 'Policy Effectiveness', icon: AlertTriangle },
 ]
 
 export default function ReportsPage() {
   const [tab, setTab] = useState('overview')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({})
+
+  async function downloadReportPdf(type) {
+    const token = localStorage.getItem('sentinel_token')
+    const res = await fetch(reportsApi.exportPdfUrl(type), { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) {
+      console.error('PDF export failed', res.status)
+      return
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${type}-exceptions-report.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   useEffect(() => {
     async function load() {
@@ -48,8 +72,11 @@ export default function ReportsPage() {
         } else if (tab === 'compliance') {
           const res = await reportsApi.complianceImpact()
           setData({ compliance: res.data })
+        } else if (tab === 'policy') {
+          const res = await reportsApi.policyEffectiveness()
+          setData({ policy: res.data })
         }
-      } catch {}
+      } catch { }
       finally {
         setLoading(false)
       }
@@ -58,12 +85,14 @@ export default function ReportsPage() {
   }, [tab])
 
   const excColumns = [
-    { key: 'title', label: 'Exception', render: (v, row) => (
-      <div>
-        <p className="font-medium text-xs text-slate-900 max-w-48 truncate">{v}</p>
-        <p className="text-[10px] text-slate-400">{row.requester?.name}</p>
-      </div>
-    )},
+    {
+      key: 'title', label: 'Exception', render: (v, row) => (
+        <div>
+          <p className="font-medium text-xs text-slate-900 max-w-48 truncate">{v}</p>
+          <p className="text-[10px] text-slate-400">{row.requester?.name}</p>
+        </div>
+      )
+    },
     { key: 'department', label: 'Department', render: (v) => <span className="text-xs">{v?.name}</span> },
     { key: 'exceptionType', label: 'Type', render: (v) => <span className="text-xs">{v?.name}</span> },
     { key: 'riskLevel', label: 'Risk', render: (v) => <RiskBadge level={v} /> },
@@ -80,11 +109,10 @@ export default function ReportsPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.id
-                ? 'border-brand-600 text-brand-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.id
+              ? 'border-brand-600 text-brand-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
           >
             <t.icon size={13} />
             {t.label}
@@ -136,6 +164,7 @@ export default function ReportsPage() {
                 <CardHeader
                   title={`Active Exceptions (${data.active?.count || 0})`}
                   subtitle="Currently active policy exceptions"
+                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('active')}><Download size={12} /> Export PDF</Button>}
                 />
               </div>
               <Table columns={excColumns} data={data.active?.data || []} loading={false} empty="No active exceptions" />
@@ -149,6 +178,7 @@ export default function ReportsPage() {
                 <CardHeader
                   title={`Critical Risk Exceptions (${data.critical?.count || 0})`}
                   subtitle="Exceptions with CRITICAL risk level — require immediate attention"
+                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('critical')}><Download size={12} /> Export PDF</Button>}
                 />
               </div>
               <Table columns={excColumns} data={data.critical?.data || []} loading={false} empty="No critical exceptions" />
@@ -162,6 +192,7 @@ export default function ReportsPage() {
                 <CardHeader
                   title={`Expired Exceptions (${data.expired?.count || 0})`}
                   subtitle="Exceptions that have passed their expiry date"
+                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('expired')}><Download size={12} /> Export PDF</Button>}
                 />
               </div>
               <Table columns={excColumns} data={data.expired?.data || []} loading={false} empty="No expired exceptions" />
@@ -241,6 +272,39 @@ export default function ReportsPage() {
                 </table>
               </Card>
             </div>
+          )}
+          {tab === 'policy' && (
+            <Card padding={false}>
+              <div className="px-5 pt-4 pb-2">
+                <CardHeader title="Policy Effectiveness" subtitle="Policies generating 10+ exceptions in the last 6 months may need revision" />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="table-header text-left">Policy</th>
+                      <th className="table-header text-left">Severity</th>
+                      <th className="table-header text-right">Exceptions (6mo)</th>
+                      <th className="table-header text-left">Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.policy || []).map((p) => (
+                      <tr key={p.policyId} className="table-row">
+                        <td className="table-cell font-medium">{p.policyCode} — {p.title}</td>
+                        <td className="table-cell"><Badge color={p.severity === 'HIGH' ? 'red' : p.severity === 'MEDIUM' ? 'amber' : 'green'}>{p.severity}</Badge></td>
+                        <td className="table-cell text-right font-mono font-semibold">{p.exceptionCount}</td>
+                        <td className="table-cell text-xs">
+                          {p.isUnrealistic
+                            ? <span className="text-red-600 font-medium">{p.recommendation}</span>
+                            : <span className="text-slate-400">No action needed</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </>
       )}

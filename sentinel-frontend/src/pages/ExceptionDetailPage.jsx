@@ -13,6 +13,7 @@ import { RiskBadge, StatusBadge, Badge } from '../components/ui/Badge.jsx'
 import { Modal } from '../components/ui/Modal.jsx'
 import { PageSpinner, ErrorMessage, FormField, Textarea } from '../components/ui/Form.jsx'
 import { formatDate, formatDateTime } from '../utils/format.js'
+import { ExpiryCountdown } from '../components/exceptions/ExpiryCountdown.jsx'
 
 function TimelineEvent({ action, user, timestamp, oldValue, newValue }) {
   const ACTION_ICONS = {
@@ -237,7 +238,10 @@ export default function ExceptionDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Expiry Date</p>
-                <p className="text-slate-800">{formatDate(exception.expiryDate)}</p>
+                <p className="text-slate-800 flex items-center gap-2">
+                  {formatDate(exception.expiryDate)}
+                  <ExpiryCountdown expiryDate={exception.expiryDate} />
+                </p>
               </div>
             </div>
 
@@ -262,11 +266,10 @@ export default function ExceptionDetailPage() {
               <div className="space-y-3">
                 {exception.approvals.map((a) => (
                   <div key={a.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
-                      a.decision === 'APPROVED' ? 'bg-green-500' :
+                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${a.decision === 'APPROVED' ? 'bg-green-500' :
                       a.decision === 'REJECTED' ? 'bg-red-500' :
-                      a.decision === 'MORE_INFO' ? 'bg-amber-500' : 'bg-slate-300'
-                    }`} />
+                        a.decision === 'MORE_INFO' ? 'bg-amber-500' : 'bg-slate-300'
+                      }`} />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold text-slate-700">
@@ -314,16 +317,14 @@ export default function ExceptionDetailPage() {
             <Card>
               <CardHeader title="Risk Breakdown" />
               <div className="mb-4 text-center">
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${
-                  exception.riskLevel === 'CRITICAL' ? 'bg-red-100' :
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${exception.riskLevel === 'CRITICAL' ? 'bg-red-100' :
                   exception.riskLevel === 'HIGH' ? 'bg-orange-100' :
-                  exception.riskLevel === 'MEDIUM' ? 'bg-amber-100' : 'bg-green-100'
-                }`}>
-                  <span className={`text-xl font-bold ${
-                    exception.riskLevel === 'CRITICAL' ? 'text-red-700' :
+                    exception.riskLevel === 'MEDIUM' ? 'bg-amber-100' : 'bg-green-100'
+                  }`}>
+                  <span className={`text-xl font-bold ${exception.riskLevel === 'CRITICAL' ? 'text-red-700' :
                     exception.riskLevel === 'HIGH' ? 'text-orange-700' :
-                    exception.riskLevel === 'MEDIUM' ? 'text-amber-700' : 'text-green-700'
-                  }`}>{exception.riskScore}</span>
+                      exception.riskLevel === 'MEDIUM' ? 'text-amber-700' : 'text-green-700'
+                    }`}>{exception.riskScore}</span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Risk Score</p>
               </div>
@@ -352,9 +353,8 @@ export default function ExceptionDetailPage() {
               <CardHeader title="Anomaly Flags" />
               <div className="space-y-2">
                 {exception.anomalyFlags.filter(f => !f.isResolved).map((f) => (
-                  <div key={f.id} className={`p-3 rounded-lg border text-xs ${
-                    f.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-amber-50 border-amber-200 text-amber-700'
-                  }`}>
+                  <div key={f.id} className={`p-3 rounded-lg border text-xs ${f.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}>
                     <p className="font-semibold">{f.anomalyType.replace(/_/g, ' ')}</p>
                     <p className="mt-0.5 opacity-80">{f.description}</p>
                   </div>

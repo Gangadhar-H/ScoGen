@@ -1,5 +1,41 @@
-const prisma = require('../prismaClient');
-const asyncHandler = require('../utils/asyncHandler');
+const prisma = require("../prismaClient");
+const asyncHandler = require("../utils/asyncHandler");
+
+const { buildAuditLogPdf } = require("../utils/pdfGenerator");
+
+// GET /api/audit-logs/export/pdf?user=&action=&resource=&startDate=&endDate=
+const exportAuditLogsPdf = asyncHandler(async (req, res) => {
+  const { user, action, resource, startDate, endDate } = req.query;
+  const where = {};
+  if (user) where.userId = user;
+  if (action) where.action = action;
+  if (resource) where.resourceType = resource;
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) where.createdAt.gte = new Date(startDate);
+    if (endDate) where.createdAt.lte = new Date(endDate);
+  }
+
+  const logs = await prisma.auditLog.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+    include: { user: { select: { name: true, email: true } } },
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="audit-trail.pdf"'
+  );
+
+  const doc = buildAuditLogPdf({
+    logs,
+    filters: { user, action, resource, startDate, endDate },
+  });
+  doc.pipe(res);
+  doc.end();
+});
 
 // GET /api/audit-logs?user=&action=&resource=&startDate=&endDate=&page=1
 const listAuditLogs = asyncHandler(async (req, res) => {
@@ -22,7 +58,7 @@ const listAuditLogs = asyncHandler(async (req, res) => {
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: { user: { select: { id: true, name: true, email: true } } },
     }),
     prisma.auditLog.count({ where }),
@@ -35,7 +71,7 @@ const listAuditLogs = asyncHandler(async (req, res) => {
 const exceptionTimeline = asyncHandler(async (req, res) => {
   const logs = await prisma.auditLog.findMany({
     where: { exceptionId: req.params.exceptionId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     include: { user: { select: { id: true, name: true, email: true } } },
   });
 
@@ -50,4 +86,7 @@ const exceptionTimeline = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { listAuditLogs, exceptionTimeline };
+// module.exports = { listAuditLogs, exceptionTimeline };
+
+// Update module.exports at the bottom of the file:
+module.exports = { listAuditLogs, exceptionTimeline, exportAuditLogsPdf };

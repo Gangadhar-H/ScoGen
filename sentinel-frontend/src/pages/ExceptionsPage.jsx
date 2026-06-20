@@ -10,9 +10,11 @@ import { Table } from '../components/ui/Table.jsx'
 import { RiskBadge, StatusBadge } from '../components/ui/Badge.jsx'
 import { SearchBar, Select, Pagination } from '../components/ui/Form.jsx'
 import { formatDate } from '../utils/format.js'
+import { ExpiryCountdown } from '../components/exceptions/ExpiryCountdown.jsx'
 
-const STATUSES = ['DRAFT','SUBMITTED','MANAGER_APPROVED','INFO_REQUESTED','ACTIVE','EXPIRED','REVOKED','REJECTED']
-const STATUS_LABELS = { DRAFT:'Draft', SUBMITTED:'Pending Review', MANAGER_APPROVED:'Manager Approved', INFO_REQUESTED:'Info Requested', ACTIVE:'Active', EXPIRED:'Expired', REVOKED:'Revoked', REJECTED:'Rejected' }
+
+const STATUSES = ['DRAFT', 'SUBMITTED', 'MANAGER_APPROVED', 'INFO_REQUESTED', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REJECTED']
+const STATUS_LABELS = { DRAFT: 'Draft', SUBMITTED: 'Pending Review', MANAGER_APPROVED: 'Manager Approved', INFO_REQUESTED: 'Info Requested', ACTIVE: 'Active', EXPIRED: 'Expired', REVOKED: 'Revoked', REJECTED: 'Rejected' }
 
 export default function ExceptionsPage() {
   const { hasRole } = useAuth()
@@ -33,7 +35,7 @@ export default function ExceptionsPage() {
   const canCreate = hasRole('REQUESTER', 'ADMIN')
 
   useEffect(() => {
-    lookupsApi.departments().then(setDepartments).catch(() => {})
+    lookupsApi.departments().then(setDepartments).catch(() => { })
   }, [])
 
   const load = useCallback(async () => {
@@ -64,10 +66,10 @@ export default function ExceptionsPage() {
 
   const filtered = search
     ? exceptions.filter(e =>
-        e.title?.toLowerCase().includes(search.toLowerCase()) ||
-        e.requester?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        e.department?.name?.toLowerCase().includes(search.toLowerCase())
-      )
+      e.title?.toLowerCase().includes(search.toLowerCase()) ||
+      e.requester?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      e.department?.name?.toLowerCase().includes(search.toLowerCase())
+    )
     : exceptions
 
   const columns = [
@@ -84,18 +86,27 @@ export default function ExceptionsPage() {
     { key: 'exceptionType', label: 'Type', render: (v) => <span className="text-xs text-slate-600">{v?.name || '—'}</span> },
     { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
     { key: 'riskLevel', label: 'Risk', render: (v) => <RiskBadge level={v} /> },
-    { key: 'riskScore', label: 'Score', render: (v) => (
-      <div className="flex items-center gap-2">
-        <div className="w-12 bg-slate-100 rounded-full h-1.5">
-          <div
-            className={`h-1.5 rounded-full ${v >= 76 ? 'bg-red-500' : v >= 51 ? 'bg-orange-500' : v >= 26 ? 'bg-amber-500' : 'bg-green-500'}`}
-            style={{ width: `${v}%` }}
-          />
+    {
+      key: 'riskScore', label: 'Score', render: (v) => (
+        <div className="flex items-center gap-2">
+          <div className="w-12 bg-slate-100 rounded-full h-1.5">
+            <div
+              className={`h-1.5 rounded-full ${v >= 76 ? 'bg-red-500' : v >= 51 ? 'bg-orange-500' : v >= 26 ? 'bg-amber-500' : 'bg-green-500'}`}
+              style={{ width: `${v}%` }}
+            />
+          </div>
+          <span className="text-xs text-slate-500 font-mono">{v}</span>
         </div>
-        <span className="text-xs text-slate-500 font-mono">{v}</span>
-      </div>
-    )},
-    { key: 'expiryDate', label: 'Expires', render: (v) => <span className="text-xs text-slate-500">{formatDate(v)}</span> },
+      )
+    },
+    {
+      key: 'expiryDate', label: 'Expires', render: (v) => (
+        <div className="space-y-0.5">
+          <span className="text-xs text-slate-500">{formatDate(v)}</span>
+          <div><ExpiryCountdown expiryDate={v} /></div>
+        </div>
+      )
+    },
     { key: 'createdAt', label: 'Created', render: (v) => <span className="text-xs text-slate-400">{formatDate(v)}</span> },
   ]
 

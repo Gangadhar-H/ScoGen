@@ -7,6 +7,7 @@ import { formatDateTime } from '../utils/format.js'
 import { useFetch } from '../hooks/useFetch.js'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { Button } from '../components/ui/Button.jsx'
+import { Download } from 'lucide-react'
 
 const ACTIONS = ['LOGIN', 'REGISTER', 'CREATE_EXCEPTION', 'UPDATE_EXCEPTION', 'DELETE_EXCEPTION',
   'SUBMIT_FOR_REVIEW', 'APPROVE', 'REJECT', 'REQUEST_INFO', 'REVOKE', 'EMERGENCY_REVOKE',
@@ -29,6 +30,21 @@ export default function AuditLogsPage() {
     setFilters(prev => ({ ...prev, [k]: v }))
     setPage(1)
   }
+
+  // Add this handler inside the component, near setFilter:
+async function handleExportPdf() {
+  const token = localStorage.getItem('sentinel_token')
+  const res = await fetch(auditApi.exportPdfUrl({ action: filters.action, startDate: filters.startDate, endDate: filters.endDate }), {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'audit-trail.pdf'
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
   const columns = [
     {
@@ -87,6 +103,9 @@ export default function AuditLogsPage() {
         <Button variant="secondary" size="sm" onClick={() => setShowFilters(!showFilters)}>
           <SlidersHorizontal size={12} /> Filters {(filters.action || filters.startDate) ? '•' : ''}
         </Button>
+        <Button variant="secondary" size="sm" onClick={handleExportPdf}>
+  <Download size={12} /> Export PDF
+</Button>
       </div>
 
       {showFilters && (

@@ -65,6 +65,7 @@ enum AnomalyType {
   LONG_RUNNING
   MULTIPLE_PER_USER
   EXCESSIVE_RENEWALS
+  REPEATED_EXCEPTION
 }
 
 enum AnomalySeverity {

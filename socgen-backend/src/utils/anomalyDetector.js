@@ -1,4 +1,4 @@
-const prisma = require('../prismaClient');
+const prisma = require("../prismaClient");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -9,44 +9,79 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 async function detectAnomalies() {
   const flags = [];
 
+  // Rule 6: Repeated exception pattern — same type+department+system opened 3+ times
+  const repeatedGroups = await prisma.exception.groupBy({
+    by: ["exceptionTypeId", "departmentId", "systemAffected"],
+    _count: { id: true },
+  });
+  for (const g of repeatedGroups) {
+    if (g._count.id >= 3) {
+      const matches = await prisma.exception.findMany({
+        where: {
+          exceptionTypeId: g.exceptionTypeId,
+          departmentId: g.departmentId,
+          systemAffected: g.systemAffected,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      });
+      if (matches[0]) {
+        flags.push({
+          exceptionId: matches[0].id,
+          anomalyType: "REPEATED_EXCEPTION",
+          severity: "WARNING",
+          description: `This exception type has been requested ${g._count.id} times for the same system ("${g.systemAffected}"). Consider a permanent policy change instead of repeated exceptions.`,
+        });
+      }
+    }
+  }
   // Rule 1: Expired but still marked ACTIVE
   const expiredActive = await prisma.exception.findMany({
-    where: { status: 'ACTIVE', expiryDate: { lt: new Date() } },
+    where: { status: "ACTIVE", expiryDate: { lt: new Date() } },
   });
   for (const e of expiredActive) {
     flags.push({
       exceptionId: e.id,
-      anomalyType: 'EXPIRED_BUT_ACTIVE',
-      severity: 'CRITICAL',
-      description: `Exception expired on ${e.expiryDate.toISOString().slice(0, 10)} but is still marked ACTIVE`,
+      anomalyType: "EXPIRED_BUT_ACTIVE",
+      severity: "CRITICAL",
+      description: `Exception expired on ${e.expiryDate
+        .toISOString()
+        .slice(0, 10)} but is still marked ACTIVE`,
     });
   }
 
   // Rule 2: Stalled in review (SUBMITTED > 30 days)
   const stalled = await prisma.exception.findMany({
-    where: { status: 'SUBMITTED', createdAt: { lt: new Date(Date.now() - 30 * DAY_MS) } },
+    where: {
+      status: "SUBMITTED",
+      createdAt: { lt: new Date(Date.now() - 30 * DAY_MS) },
+    },
   });
   for (const e of stalled) {
     const days = Math.floor((Date.now() - e.createdAt.getTime()) / DAY_MS);
     flags.push({
       exceptionId: e.id,
-      anomalyType: 'STALLED_REVIEW',
-      severity: 'WARNING',
+      anomalyType: "STALLED_REVIEW",
+      severity: "WARNING",
       description: `Pending approval for ${days} days`,
     });
   }
 
   // Rule 3: Long running (duration > 180 days) while ACTIVE
   const longRunning = await prisma.exception.findMany({
-    where: { status: 'ACTIVE', startDate: { not: null }, expiryDate: { not: null } },
+    where: {
+      status: "ACTIVE",
+      startDate: { not: null },
+      expiryDate: { not: null },
+    },
   });
   for (const e of longRunning) {
     const days = Math.ceil((e.expiryDate - e.startDate) / DAY_MS);
     if (days > 180) {
       flags.push({
         exceptionId: e.id,
-        anomalyType: 'LONG_RUNNING',
-        severity: 'WARNING',
+        anomalyType: "LONG_RUNNING",
+        severity: "WARNING",
         description: `Exception duration is ${days} days (>180). Consider a permanent policy change.`,
       });
     }
@@ -54,20 +89,20 @@ async function detectAnomalies() {
 
   // Rule 4: 3+ simultaneous ACTIVE exceptions for the same requester
   const grouped = await prisma.exception.groupBy({
-    by: ['requesterId'],
-    where: { status: 'ACTIVE' },
+    by: ["requesterId"],
+    where: { status: "ACTIVE" },
     _count: { id: true },
   });
   for (const g of grouped) {
     if (g._count.id >= 3) {
       const userExceptions = await prisma.exception.findMany({
-        where: { requesterId: g.requesterId, status: 'ACTIVE' },
+        where: { requesterId: g.requesterId, status: "ACTIVE" },
       });
       for (const e of userExceptions) {
         flags.push({
           exceptionId: e.id,
-          anomalyType: 'MULTIPLE_PER_USER',
-          severity: 'WARNING',
+          anomalyType: "MULTIPLE_PER_USER",
+          severity: "WARNING",
           description: `Requester has ${g._count.id} active exceptions simultaneously`,
         });
       }
@@ -81,8 +116,8 @@ async function detectAnomalies() {
   for (const e of excessiveRenewals) {
     flags.push({
       exceptionId: e.id,
-      anomalyType: 'EXCESSIVE_RENEWALS',
-      severity: 'WARNING',
+      anomalyType: "EXCESSIVE_RENEWALS",
+      severity: "WARNING",
       description: `Renewed ${e.renewalCount} times. Consider converting to a permanent policy change.`,
     });
   }
