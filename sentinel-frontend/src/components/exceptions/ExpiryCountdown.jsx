@@ -26,10 +26,14 @@ export function ExpiryCountdown({ expiryDate }) {
     const warn = remaining.days < 3
 
     return (
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${urgent ? 'bg-red-100 text-red-700' : warn ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border transition-all ${urgent ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
+                warn ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
             }`}>
-            <Clock size={10} />
-            {remaining.days}d {remaining.hours}h {remaining.mins}m
+            <Clock size={12} className={urgent ? 'animate-pulse' : ''} />
+            <span className="tracking-widest uppercase">
+                {remaining.days}d {remaining.hours}h {remaining.mins}m
+            </span>
         </span>
     )
 }

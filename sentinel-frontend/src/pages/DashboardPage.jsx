@@ -10,6 +10,7 @@ import { exceptionsApi } from '../api/exceptions.js'
 import { adminApi } from '../api/admin.js'
 import { StatCard } from '../components/ui/Card.jsx'
 import { Card, CardHeader } from '../components/ui/Card.jsx'
+import { Button } from '../components/ui/Button.jsx'
 import { RiskBadge, StatusBadge } from '../components/ui/Badge.jsx'
 import { PageSpinner } from '../components/ui/Form.jsx'
 import { Table } from '../components/ui/Table.jsx'
@@ -75,15 +76,15 @@ export default function DashboardPage() {
   const exceptionColumns = [
     {
       key: 'title', label: 'Exception', render: (v, row) => (
-        <div>
-          <p className="font-medium text-slate-900 text-xs truncate max-w-48">{v}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">{row.department?.name}</p>
+        <div className="min-w-0">
+          <p className="font-semibold text-white text-sm truncate max-w-xs">{v}</p>
+          <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-wider mt-1">{row.department?.name}</p>
         </div>
       )
     },
     { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
     { key: 'riskLevel', label: 'Risk', render: (v) => <RiskBadge level={v} /> },
-    { key: 'expiryDate', label: 'Expires', render: (v) => <span className="text-xs text-slate-500">{formatDate(v)}</span> },
+    { key: 'expiryDate', label: 'Expires', render: (v) => <span className="text-xs text-dark-text/50 font-medium">{formatDate(v)}</span> },
   ]
 
   if (loading) return <PageSpinner />
@@ -163,14 +164,17 @@ export default function DashboardPage() {
 
       {/* Anomaly warning */}
       {canSeeReports && dashData?.anomalyCount > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3">
-          <AlertOctagon size={16} className="text-red-500 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">
-              {dashData.anomalyCount} anomaly flag{dashData.anomalyCount !== 1 ? 's' : ''} detected
-            </p>
-            <p className="text-xs text-red-600 mt-0.5">Review exceptions for potential policy violations</p>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-6 py-4 flex items-center gap-4 animate-pulse">
+          <div className="p-2 bg-red-500/20 rounded-lg">
+            <AlertOctagon size={20} className="text-red-400" />
           </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-red-200">
+              {dashData.anomalyCount} critical anomaly flag{dashData.anomalyCount !== 1 ? 's' : ''} detected
+            </p>
+            <p className="text-xs text-red-400/70 mt-0.5 font-medium">Potential policy violations require immediate governance review.</p>
+          </div>
+          <Button variant="danger" size="sm" onClick={() => navigate('/audit-logs')}>Review All</Button>
         </div>
       )}
 
@@ -193,19 +197,17 @@ export default function DashboardPage() {
       )}
 
       {/* Bottom row */}
-      <div className={`grid gap-5 ${canSeeReports ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
-        <Card padding={false} className={canSeeReports ? 'lg:col-span-2' : ''}>
-          <div className="px-5 pt-5 pb-0">
-            <CardHeader
-              title="Recent Exceptions"
-              subtitle="Latest exception activity"
-              action={
-                <button onClick={() => navigate('/exceptions')} className="text-xs text-brand-600 hover:text-brand-700 font-medium">
-                  View all →
-                </button>
-              }
-            />
-          </div>
+      <div className={`grid gap-6 ${canSeeReports ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
+        <Card className={canSeeReports ? 'lg:col-span-2' : ''}>
+          <CardHeader
+            title="Recent Exceptions"
+            subtitle="Latest organization-wide activity"
+            action={
+              <button onClick={() => navigate('/exceptions')} className="text-xs text-primary-light hover:text-white transition-colors font-bold uppercase tracking-widest">
+                View Repository →
+              </button>
+            }
+          />
           <Table
             columns={exceptionColumns}
             data={exceptions}

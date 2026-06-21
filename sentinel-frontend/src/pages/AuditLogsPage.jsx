@@ -31,7 +31,6 @@ export default function AuditLogsPage() {
     setPage(1)
   }
 
-  // Add this handler inside the component, near setFilter:
   async function handleExportPdf() {
     const token = localStorage.getItem('sentinel_token')
     const res = await fetch(auditApi.exportPdfUrl({ action: filters.action, startDate: filters.startDate, endDate: filters.endDate }), {
@@ -50,44 +49,55 @@ export default function AuditLogsPage() {
     {
       key: 'createdAt',
       label: 'Timestamp',
-      width: '160px',
-      render: (v) => <span className="text-xs font-mono text-slate-500">{formatDateTime(v)}</span>
+      width: '180px',
+      render: (v) => <span className="text-[10px] font-mono font-bold text-dark-text/30 uppercase tracking-wider">{formatDateTime(v)}</span>
     },
     {
       key: 'user',
-      label: 'User',
+      label: 'Operator Identity',
       render: (v) => (
-        <div>
-          <p className="text-xs font-medium text-slate-800">{v?.name || 'System'}</p>
-          <p className="text-[10px] text-slate-400">{v?.email}</p>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-dark-text/30 font-bold text-[10px] border border-white/5">
+            {v?.name?.charAt(0) || 'S'}
+          </div>
+          <div>
+            <p className="text-xs font-bold text-white tracking-tight">{v?.name || 'Governance Engine'}</p>
+            <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">{v?.email || 'SYSTEM_PROC'}</p>
+          </div>
         </div>
       )
     },
     {
       key: 'action',
-      label: 'Action',
-      render: (v) => (
-        <span className={`font-mono text-xs px-2 py-0.5 rounded ${v?.includes('DELETE') || v?.includes('REVOKE') || v?.includes('REJECT') ? 'bg-red-50 text-red-700' :
-            v?.includes('APPROVE') || v?.includes('ACTIVE') ? 'bg-green-50 text-green-700' :
-              v?.includes('CREATE') || v?.includes('SUBMIT') ? 'bg-blue-50 text-blue-700' :
-                'bg-slate-50 text-slate-600'
-          }`}>
-          {v}
-        </span>
-      )
+      label: 'Event Type',
+      render: (v) => {
+        const isDestructive = v?.includes('DELETE') || v?.includes('REVOKE') || v?.includes('REJECT')
+        const isSuccess = v?.includes('APPROVE') || v?.includes('ACTIVE') || v?.includes('LOGIN')
+        const isCreation = v?.includes('CREATE') || v?.includes('SUBMIT')
+
+        return (
+          <span className={`font-mono text-[10px] font-bold px-2 py-1 rounded-md border uppercase tracking-widest ${isDestructive ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+              isSuccess ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                isCreation ? 'bg-primary/10 text-primary-light border-primary/20' :
+                  'bg-white/5 text-dark-text/40 border-white/10'
+            }`}>
+            {v?.replace(/_/g, ' ')}
+          </span>
+        )
+      }
     },
-    { key: 'resourceType', label: 'Resource', render: (v) => <span className="text-xs text-slate-500 capitalize">{v}</span> },
+    { key: 'resourceType', label: 'Asset Class', render: (v) => <span className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">{v}</span> },
     {
       key: 'newValue',
-      label: 'Details',
+      label: 'Status Transition',
       render: (v, row) => {
         const status = v?.status || row.oldValue?.status
-        if (!status) return <span className="text-xs text-slate-300">—</span>
+        if (!status) return <span className="text-dark-text/10">—</span>
         return (
-          <div className="text-[10px] text-slate-500 font-mono">
-            {row.oldValue?.status && <span className="line-through text-red-400">{row.oldValue.status}</span>}
-            {row.oldValue?.status && v?.status && <span className="mx-1">→</span>}
-            {v?.status && <span className="text-green-700">{v.status}</span>}
+          <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-tighter">
+            {row.oldValue?.status && <span className="line-through text-dark-text/20">{row.oldValue.status}</span>}
+            {row.oldValue?.status && v?.status && <span className="text-dark-text/20">→</span>}
+            {v?.status && <span className="text-emerald-400 text-glow-sm">{v.status}</span>}
           </div>
         )
       }
@@ -95,42 +105,53 @@ export default function AuditLogsPage() {
   ]
 
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">{total} log entries</p>
-        <Button variant="secondary" size="sm" onClick={() => setShowFilters(!showFilters)}>
-          <SlidersHorizontal size={12} /> Filters {(filters.action || filters.startDate) ? '•' : ''}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={handleExportPdf}>
-          <Download size={12} /> Export PDF
-        </Button>
+    <div className="space-y-6 animate-fade-in">
+      {/* Dynamic Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">System Audit Trail</h1>
+          <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+            Persistent ledger of all governance activities Node logs: <span className="text-white">{total}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" size="md" onClick={() => setShowFilters(!showFilters)} className={showFilters ? 'bg-white/20' : ''}>
+            <SlidersHorizontal size={16} />
+            <span className="ml-1 uppercase text-[10px] tracking-widest font-bold">Query Params</span>
+          </Button>
+          <Button variant="secondary" size="md" onClick={handleExportPdf}>
+            <Download size={16} />
+            <span className="ml-1 uppercase text-[10px] tracking-widest font-bold">Export Ledger</span>
+          </Button>
+        </div>
       </div>
 
       {showFilters && (
-        <Card>
-          <div className="flex items-end gap-3">
-            <FormField label="Action">
-              <Select value={filters.action} onChange={e => setFilter('action', e.target.value)} className="w-56">
-                <option value="">All Actions</option>
-                {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+        <Card className="border-primary/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <FormField label="Event Action">
+              <Select value={filters.action} onChange={e => setFilter('action', e.target.value)}>
+                <option value="">Full Trace</option>
+                {ACTIONS.map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
               </Select>
             </FormField>
-            <FormField label="From Date">
-              <Input type="date" value={filters.startDate} onChange={e => setFilter('startDate', e.target.value)} className="w-40" />
+            <FormField label="Temporal Start">
+              <Input type="date" value={filters.startDate} onChange={e => setFilter('startDate', e.target.value)} />
             </FormField>
-            <FormField label="To Date">
-              <Input type="date" value={filters.endDate} onChange={e => setFilter('endDate', e.target.value)} className="w-40" />
+            <FormField label="Temporal End">
+              <Input type="date" value={filters.endDate} onChange={e => setFilter('endDate', e.target.value)} />
             </FormField>
-            <Button variant="ghost" size="sm" onClick={() => setFilters({ action: '', startDate: '', endDate: '' })}>
-              Clear
-            </Button>
+            <div className="flex items-end">
+              <Button variant="ghost" size="md" onClick={() => setFilters({ action: '', startDate: '', endDate: '' })} className="w-full">
+                Wipe Filter Params
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      <Card padding={false}>
-        <Table columns={columns} data={logs} loading={loading} empty="No audit logs found" />
+      <Card className="p-0 overflow-hidden">
+        <Table columns={columns} data={logs} loading={loading} empty="No architectural logs detected in this sector" />
         <Pagination page={page} total={total} pageSize={20} onChange={setPage} />
       </Card>
     </div>

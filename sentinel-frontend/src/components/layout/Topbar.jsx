@@ -39,39 +39,44 @@ function NotifDropdown({ onClose }) {
   }
 
   return (
-    <div className="absolute right-0 top-10 w-80 bg-white rounded-xl border border-slate-200 shadow-xl z-50">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-        <button onClick={handleMarkAll} className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+    <div className="absolute right-0 top-[calc(100%+12px)] w-80 bg-dark-card border border-dark-border shadow-2xl rounded-2xl z-50 animate-fade-in overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border/50">
+        <h3 className="text-sm font-bold text-white uppercase tracking-widest opacity-30">Notifications</h3>
+        <button onClick={handleMarkAll} className="text-xs text-primary-light hover:text-white transition-colors font-semibold">
           Mark all read
         </button>
       </div>
-      <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+      <div className="max-h-80 overflow-y-auto custom-scrollbar">
         {notifs.length === 0 && (
-          <p className="text-xs text-slate-400 text-center py-8">No notifications</p>
+          <div className="flex flex-col items-center justify-center py-12 px-6">
+            <div className="p-3 rounded-full bg-white/5 mb-3">
+              <Bell size={24} className="text-dark-text/20" />
+            </div>
+            <p className="text-xs text-dark-text/40 font-medium">All caught up!</p>
+          </div>
         )}
         {notifs.map((n) => (
           <div
             key={n.id}
             onClick={() => { handleMark(n.id); onClose() }}
-            className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!n.isRead ? 'bg-blue-50/50' : ''}`}
+            className={`px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors group relative ${!n.isRead ? 'bg-primary/5' : ''}`}
           >
-            <div className="flex items-start gap-2">
-              {!n.isRead && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-1.5 flex-shrink-0" />}
-              <div className={!n.isRead ? '' : 'pl-3.5'}>
-                <p className="text-xs text-slate-800 leading-relaxed">{n.message}</p>
-                <p className="text-[10px] text-slate-400 mt-1">{timeAgo(n.createdAt)}</p>
+            {!n.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />}
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs leading-relaxed transition-colors ${!n.isRead ? 'text-white font-medium' : 'text-dark-text/60'}`}>{n.message}</p>
+                <p className="text-[10px] text-dark-text/30 mt-1.5 font-medium">{timeAgo(n.createdAt)}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="px-4 py-2 border-t border-slate-100">
+      <div className="px-5 py-3 border-t border-dark-border/50 bg-white/5">
         <button
           onClick={() => { navigate('/notifications'); onClose() }}
-          className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+          className="w-full text-center text-xs text-primary-light hover:text-white transition-colors font-bold uppercase tracking-wider"
         >
-          View all notifications →
+          View All Center
         </button>
       </div>
     </div>
@@ -87,7 +92,7 @@ export function Topbar() {
   const [showUser, setShowUser] = useState(false)
 
   const pathKey = Object.keys(PAGE_TITLES).find((k) => location.pathname === k || location.pathname.startsWith(k + '/'))
-  const title = PAGE_TITLES[pathKey] || 'SentinelGRC'
+  const title = PAGE_TITLES[pathKey] || 'Sentinel'
 
   function handleLogout() {
     logout()
@@ -95,54 +100,63 @@ export function Topbar() {
   }
 
   return (
-    <header className="bg-white border-b border-slate-200 h-14 flex items-center px-6 gap-4 flex-shrink-0">
+    <header className="bg-dark-bg/40 backdrop-blur-xl border-b border-dark-border/30 h-20 flex items-center px-8 gap-6 flex-shrink-0 relative z-40">
       <div className="flex-1">
-        <h1 className="text-sm font-semibold text-slate-900">{title}</h1>
+        <h1 className="text-xl font-display font-bold text-white tracking-tight">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-5">
         {/* Notification bell */}
         <div className="relative">
           <button
             onClick={() => { setShowNotifs(!showNotifs); setShowUser(false) }}
-            className="relative p-2 rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className={`relative p-2.5 rounded-xl transition-all duration-200 ${showNotifs
+              ? 'bg-primary/20 text-primary-light border border-primary/30'
+              : 'text-dark-text/50 hover:bg-white/5 hover:text-white border border-transparent'
+              }`}
           >
-            <Bell size={16} />
+            <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
             )}
           </button>
           {showNotifs && <NotifDropdown onClose={() => setShowNotifs(false)} />}
         </div>
 
         {/* Divider */}
-        <div className="w-px h-5 bg-slate-200" />
+        <div className="w-px h-6 bg-dark-border/50" />
 
         {/* User menu */}
         <div className="relative">
           <button
             onClick={() => { setShowUser(!showUser); setShowNotifs(false) }}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${showUser
+              ? 'bg-white/10 text-white border border-white/20'
+              : 'hover:bg-white/5 transition-colors border border-transparent text-dark-text/70'
+              }`}
           >
-            <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center">
-              <User size={12} className="text-brand-700" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center">
+              <User size={16} className="text-primary-light" />
             </div>
-            <span className="text-sm font-medium text-slate-700 max-w-32 truncate">{user?.name}</span>
-            <ChevronDown size={12} className="text-slate-400" />
+            <div className="text-left hidden sm:block">
+              <p className="text-sm font-semibold leading-none">{user?.name}</p>
+              <p className="text-[10px] text-dark-text/40 mt-1 font-medium">{user?.email}</p>
+            </div>
+            <ChevronDown size={14} className={`text-dark-text/30 transition-transform duration-200 ${showUser ? 'rotate-180' : ''}`} />
           </button>
           {showUser && (
-            <div className="absolute right-0 top-10 w-44 bg-white rounded-lg border border-slate-200 shadow-xl z-50 py-1">
-              <div className="px-3 py-2 border-b border-slate-100">
-                <p className="text-xs font-medium text-slate-800">{user?.name}</p>
-                <p className="text-[10px] text-slate-400">{user?.email}</p>
+            <div className="absolute right-0 top-[calc(100%+12px)] w-56 bg-dark-card border border-dark-border shadow-2xl rounded-2xl p-2 animate-fade-in overflow-hidden">
+              <div className="px-4 py-4 mb-1 border-b border-dark-border/50">
+                <p className="text-xs font-bold text-dark-text/30 uppercase tracking-widest leading-none">Account</p>
+                <p className="text-sm font-semibold text-white mt-2 truncate">{user?.name}</p>
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 rounded-xl transition-colors font-medium mt-1 group"
               >
-                <LogOut size={12} />
+                <div className="p-1.5 rounded-lg bg-red-400/10 group-hover:bg-red-400/20 transition-colors">
+                  <LogOut size={14} />
+                </div>
                 Sign out
               </button>
             </div>
@@ -152,7 +166,7 @@ export function Topbar() {
 
       {/* Click outside handler */}
       {(showNotifs || showUser) && (
-        <div className="fixed inset-0 z-40" onClick={() => { setShowNotifs(false); setShowUser(false) }} />
+        <div className="fixed inset-0 z-[-1]" onClick={() => { setShowNotifs(false); setShowUser(false) }} />
       )}
     </header>
   )

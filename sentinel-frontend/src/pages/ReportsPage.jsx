@@ -91,186 +91,184 @@ export default function ReportsPage() {
 
   const excColumns = [
     {
-      key: 'title', label: 'Exception', render: (v, row) => (
+      key: 'title', label: 'Protocol Signature', render: (v, row) => (
         <div>
-          <p className="font-medium text-xs text-slate-900 max-w-48 truncate">{v}</p>
-          <p className="text-[10px] text-slate-400">{row.requester?.name}</p>
+          <p className="font-bold text-sm text-white tracking-tight max-w-48 truncate">{v}</p>
+          <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">{row.requester?.name}</p>
         </div>
       )
     },
-    { key: 'department', label: 'Department', render: (v) => <span className="text-xs">{v?.name}</span> },
-    { key: 'exceptionType', label: 'Type', render: (v) => <span className="text-xs">{v?.name}</span> },
-    { key: 'riskLevel', label: 'Risk', render: (v) => <RiskBadge level={v} /> },
-    { key: 'riskScore', label: 'Score', render: (v) => <span className="font-mono text-xs">{v}</span> },
-    { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
-    { key: 'expiryDate', label: 'Expires', render: (v) => <span className="text-xs text-slate-500">{formatDate(v)}</span> },
+    { key: 'department', label: 'Functional Unit', render: (v) => <span className="text-xs font-medium text-dark-text/40">{v?.name}</span> },
+    { key: 'exceptionType', label: 'Class', render: (v) => <span className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">{v?.name}</span> },
+    { key: 'riskLevel', label: 'Index', render: (v) => <RiskBadge level={v} /> },
+    { key: 'riskScore', label: 'Vector', render: (v) => <span className="font-mono text-xs font-bold text-white">{v}</span> },
+    { key: 'status', label: 'Operational Status', render: (v) => <StatusBadge status={v} /> },
+    { key: 'expiryDate', label: 'Terminal Date', render: (v) => <span className="text-xs text-dark-text/40 font-medium">{formatDate(v)}</span> },
   ]
 
   return (
-    <div className="space-y-5">
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200">
+    <div className="space-y-8 animate-fade-in">
+      {/* Dynamic Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">Intelligence Ledger</h1>
+          <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+            Analytical reporting suite for architectural governance and risk profiling
+          </p>
+        </div>
+      </div>
+
+      {/* Analytical Controls */}
+      <div className="flex items-center gap-1 bg-white/[0.02] p-1 rounded-2xl border border-white/5 self-start overflow-x-auto max-w-full no-scrollbar">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.id
-              ? 'border-brand-600 text-brand-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-[0.15em] transition-all whitespace-nowrap ${tab === t.id
+                ? 'bg-gradient-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                : 'text-dark-text/30 hover:text-white hover:bg-white/5'
               }`}
           >
-            <t.icon size={13} />
+            <t.icon size={14} />
             {t.label}
           </button>
         ))}
       </div>
 
-      {loading ? <PageSpinner /> : (
-        <>
+      {loading ? (
+        <div className="py-20 flex justify-center">
+          <PageSpinner />
+        </div>
+      ) : (
+        <div className="animate-fade-in">
           {/* Overview */}
           {tab === 'overview' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-3 gap-5">
-                <Card>
-                  <CardHeader title="Risk Distribution" subtitle="Active exceptions by risk level" />
-                  <RiskDistributionChart data={data.active?.byRiskLevel || {}} />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-1">
+                  <div className="flex items-center justify-between mb-6">
+                    <CardHeader title="Risk Profile" subtitle="Active distribution by vector level" />
+                  </div>
+                  <div className="h-[280px]">
+                    <RiskDistributionChart data={data.active?.byRiskLevel || {}} />
+                  </div>
                 </Card>
-                <Card className="col-span-2">
-                  <CardHeader title="Department Overview" subtitle="Exception counts by department and status" />
-                  <DepartmentRiskChart data={data.dept} />
+                <Card className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-6">
+                    <CardHeader title="Functional Nodes" subtitle="Exception density by operational unit" />
+                  </div>
+                  <div className="h-[280px]">
+                    <DepartmentRiskChart data={data.dept} />
+                  </div>
                 </Card>
               </div>
+
               <Card>
-                <CardHeader title="Compliance Framework Impact" subtitle="Number of exceptions mapped to each compliance framework" />
-                <ComplianceImpactChart data={data.compliance} />
+                <div className="flex items-center justify-between mb-6">
+                  <CardHeader title="Governance Framework Index" subtitle="Regulatory mapping density across core infrastructures" />
+                </div>
+                <div className="h-[320px]">
+                  <ComplianceImpactChart data={data.compliance} />
+                </div>
               </Card>
 
               {/* Type breakdown */}
               {data.active?.byType && (
-                <Card>
-                  <CardHeader title="Exceptions by Type" />
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Object.entries(data.active.byType).map(([name, count]) => (
-                      <div key={name} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                        <p className="text-2xl font-bold text-slate-800">{count}</p>
-                        <p className="text-xs text-slate-500 mt-1">{name}</p>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Object.entries(data.active.byType).map(([name, count]) => (
+                    <div key={name} className="glass-card p-6 border-white/5 hover:bg-white/[0.04] transition-all group">
+                      <p className="text-3xl font-display font-bold text-white tracking-tighter group-hover:text-primary transition-colors">{count}</p>
+                      <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-2">{name}</p>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
 
-          {/* Active */}
-          {tab === 'active' && (
-            <Card padding={false}>
-              <div className="px-5 pt-4 pb-0">
-                <CardHeader
-                  title={`Active Exceptions (${data.active?.count || 0})`}
-                  subtitle="Currently active policy exceptions"
-                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('active')}><Download size={12} /> Export PDF</Button>}
-                />
+          {/* Tab Views based on same premium pattern */}
+          {['active', 'critical', 'expired'].includes(tab) && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-display font-bold text-white tracking-tight capitalize">{tab} Report</h3>
+                <Button variant="secondary" size="md" onClick={() => downloadReportPdf(tab)}>
+                  <Download size={16} /> <span className="ml-1 uppercase text-[10px] tracking-widest font-bold">Download Ledger</span>
+                </Button>
               </div>
-              <Table columns={excColumns} data={data.active?.data || []} loading={false} empty="No active exceptions" />
-            </Card>
-          )}
-
-          {/* Critical */}
-          {tab === 'critical' && (
-            <Card padding={false}>
-              <div className="px-5 pt-4 pb-0">
-                <CardHeader
-                  title={`Critical Risk Exceptions (${data.critical?.count || 0})`}
-                  subtitle="Exceptions with CRITICAL risk level — require immediate attention"
-                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('critical')}><Download size={12} /> Export PDF</Button>}
-                />
-              </div>
-              <Table columns={excColumns} data={data.critical?.data || []} loading={false} empty="No critical exceptions" />
-            </Card>
-          )}
-
-          {/* Expired */}
-          {tab === 'expired' && (
-            <Card padding={false}>
-              <div className="px-5 pt-4 pb-0">
-                <CardHeader
-                  title={`Expired Exceptions (${data.expired?.count || 0})`}
-                  subtitle="Exceptions that have passed their expiry date"
-                  action={<Button variant="secondary" size="sm" onClick={() => downloadReportPdf('expired')}><Download size={12} /> Export PDF</Button>}
-                />
-              </div>
-              <Table columns={excColumns} data={data.expired?.data || []} loading={false} empty="No expired exceptions" />
-            </Card>
-          )}
-
-          {/* Department */}
-          {tab === 'department' && (
-            <div className="space-y-5">
-              <Card>
-                <CardHeader title="Department-wise Breakdown" subtitle="Exception status counts per department" />
-                <DepartmentRiskChart data={data.dept} />
-              </Card>
-              <Card>
-                <CardHeader title="Detailed Breakdown" />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className="table-header text-left">Department</th>
-                        {['ACTIVE', 'SUBMITTED', 'DRAFT', 'EXPIRED', 'REJECTED', 'REVOKED'].map(s => (
-                          <th key={s} className="table-header text-center">{s}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(data.dept || {}).map(([dept, counts]) => (
-                        <tr key={dept} className="table-row">
-                          <td className="table-cell font-medium">{dept}</td>
-                          {['ACTIVE', 'SUBMITTED', 'DRAFT', 'EXPIRED', 'REJECTED', 'REVOKED'].map(s => (
-                            <td key={s} className="table-cell text-center">
-                              {counts[s] ? <span className="font-mono">{counts[s]}</span> : <span className="text-slate-300">—</span>}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <Card className="p-0">
+                <Table columns={excColumns} data={data[tab]?.data || []} loading={false} empty={`No ${tab} exceptions detected`} />
               </Card>
             </div>
           )}
 
-          {/* Compliance */}
-          {tab === 'compliance' && (
-            <div className="space-y-5">
+          {/* Department Breakdown */}
+          {tab === 'department' && (
+            <div className="space-y-6">
               <Card>
-                <CardHeader title="Compliance Impact" subtitle="Exceptions mapped to compliance frameworks" />
-                <ComplianceImpactChart data={data.compliance} />
+                <CardHeader title="Unit Distribution" subtitle="Normalized exception metrics per functional node" />
+                <div className="h-[320px] mt-6">
+                  <DepartmentRiskChart data={data.dept} />
+                </div>
               </Card>
-              <Card padding={false}>
-                <table className="w-full text-sm">
+              <Card className="p-0 overflow-hidden">
+                <table className="w-full text-[11px] font-bold uppercase tracking-wider">
                   <thead>
-                    <tr>
-                      <th className="table-header text-left">Framework</th>
-                      <th className="table-header text-left">Control Code</th>
-                      <th className="table-header text-left">Exception Types</th>
-                      <th className="table-header text-right">Total Exceptions</th>
+                    <tr className="bg-white/[0.02] border-b border-white/5">
+                      <th className="px-6 py-4 text-left text-dark-text/30">Functional Unit</th>
+                      {['ACTIVE', 'SUBMITTED', 'DRAFT', 'EXPIRED', 'REJECTED', 'REVOKED'].map(s => (
+                        <th key={s} className="px-6 py-4 text-center text-dark-text/30">{s}</th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-white/5">
+                    {Object.entries(data.dept || {}).map(([dept, counts]) => (
+                      <tr key={dept} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4 text-white font-bold">{dept}</td>
+                        {['ACTIVE', 'SUBMITTED', 'DRAFT', 'EXPIRED', 'REJECTED', 'REVOKED'].map(s => (
+                          <td key={s} className="px-6 py-4 text-center">
+                            {counts[s] ? <span className="font-mono text-xs text-primary-light">{counts[s]}</span> : <span className="text-dark-text/10">—</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+          )}
+
+          {/* Compliance Breakdown */}
+          {tab === 'compliance' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader title="Regulatory Mapping" subtitle="Exception density mapped to global compliance architectures" />
+                <div className="h-[320px] mt-6">
+                  <ComplianceImpactChart data={data.compliance} />
+                </div>
+              </Card>
+              <Card className="p-0 overflow-hidden">
+                <table className="w-full text-[11px] font-bold uppercase tracking-wider">
+                  <thead>
+                    <tr className="bg-white/[0.02] border-b border-white/5">
+                      <th className="px-6 py-4 text-left text-dark-text/30">Architecture</th>
+                      <th className="px-6 py-4 text-left text-dark-text/30">Control ID</th>
+                      <th className="px-6 py-4 text-left text-dark-text/30">Entity Variants</th>
+                      <th className="px-6 py-4 text-right text-dark-text/30">Total Nodes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
                     {(data.compliance || []).map((item, i) => (
-                      <tr key={i} className="table-row">
-                        <td className="table-cell font-medium">{item.framework}</td>
-                        <td className="table-cell font-mono text-xs text-slate-500">{item.controlCode}</td>
-                        <td className="table-cell">
+                      <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4 text-white font-bold">{item.framework}</td>
+                        <td className="px-6 py-4"><span className="font-mono text-[10px] text-primary-light bg-primary/10 px-2 py-1 rounded border border-primary/20">{item.controlCode}</span></td>
+                        <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
                             {item.mappedExceptionTypes.map(t => (
-                              <span key={t} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px]">{t}</span>
+                              <span key={t} className="px-1.5 py-0.5 bg-white/5 text-dark-text/40 rounded text-[9px] border border-white/10">{t}</span>
                             ))}
                           </div>
                         </td>
-                        <td className="table-cell text-right font-mono font-semibold">{item.exceptionCount}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-white text-sm">{item.exceptionCount}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -278,54 +276,56 @@ export default function ReportsPage() {
               </Card>
             </div>
           )}
+
+          {/* Policy Effectiveness */}
           {tab === 'policy' && (
-            <Card padding={false}>
-              <div className="px-5 pt-4 pb-2">
-                <CardHeader title="Policy Effectiveness" subtitle="Policies generating 10+ exceptions in the last 6 months may need revision" />
+            <Card className="p-0 overflow-hidden">
+              <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+                <h3 className="text-lg font-display font-bold text-white tracking-tight">Policy Resilience Analysis</h3>
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-1">Protocols generating critical exception volumes require architectural revision</p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className="table-header text-left">Policy</th>
-                      <th className="table-header text-left">Severity</th>
-                      <th className="table-header text-right">Exceptions (6mo)</th>
-                      <th className="table-header text-left">Recommendation</th>
+              <table className="w-full text-[11px] font-bold uppercase tracking-wider">
+                <thead>
+                  <tr className="bg-white/[0.02] border-b border-white/5">
+                    <th className="px-6 py-4 text-left text-dark-text/30">Core Protocol</th>
+                    <th className="px-6 py-4 text-left text-dark-text/30">Severity Vector</th>
+                    <th className="px-6 py-4 text-right text-dark-text/30">6Mo Volatility</th>
+                    <th className="px-6 py-4 text-left text-dark-text/30">Structural Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {(data.policy || []).map((p) => (
+                    <tr key={p.policyId} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 text-white font-bold">{p.policyCode} <span className="opacity-40 mx-2">/</span> {p.title}</td>
+                      <td className="px-6 py-4"><Badge color={p.severity === 'HIGH' ? 'red' : p.severity === 'MEDIUM' ? 'yellow' : 'green'}>{p.severity}</Badge></td>
+                      <td className="px-6 py-4 text-right font-mono font-bold text-white text-sm">{p.exceptionCount}</td>
+                      <td className="px-6 py-4">
+                        {p.isUnrealistic
+                          ? <span className="text-red-400 font-bold flex items-center gap-2 italic ring-1 ring-red-500/20 px-2 py-1 rounded-lg bg-red-500/5">{p.recommendation}</span>
+                          : <span className="text-dark-text/20 italic">Architectural Integrity Maintained</span>}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(data.policy || []).map((p) => (
-                      <tr key={p.policyId} className="table-row">
-                        <td className="table-cell font-medium">{p.policyCode} — {p.title}</td>
-                        <td className="table-cell"><Badge color={p.severity === 'HIGH' ? 'red' : p.severity === 'MEDIUM' ? 'amber' : 'green'}>{p.severity}</Badge></td>
-                        <td className="table-cell text-right font-mono font-semibold">{p.exceptionCount}</td>
-                        <td className="table-cell text-xs">
-                          {p.isUnrealistic
-                            ? <span className="text-red-600 font-medium">{p.recommendation}</span>
-                            : <span className="text-slate-400">No action needed</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </Card>
           )}
 
+          {/* Governance Analytics */}
           {tab === 'governance' && data.governance && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <GovernanceScoreSummary
                 score={data.governance.organizationScore}
                 grade={data.governance.organizationGrade}
               />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {data.governance.departments.map((dept) => (
                   <DepartmentScoreCard key={dept.departmentId} dept={dept} />
                 ))}
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )

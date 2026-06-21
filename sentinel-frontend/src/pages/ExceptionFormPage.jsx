@@ -10,13 +10,6 @@ import { FormField, Input, Select, Textarea } from '../components/ui/Form.jsx'
 import { RiskBadge } from '../components/ui/Badge.jsx'
 import { PageSpinner } from '../components/ui/Form.jsx'
 
-function getRisk(score) {
-  if (score <= 25) return 'LOW'
-  if (score <= 50) return 'MEDIUM'
-  if (score <= 75) return 'HIGH'
-  return 'CRITICAL'
-}
-
 export default function ExceptionFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -33,8 +26,14 @@ export default function ExceptionFormPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
   const [previewScore, setPreviewScore] = useState(null)
-  const [advisorSuggestion, setAdvisorSuggestion] = useState(null)   // ← add this
-  const [advisorLoading, setAdvisorLoading] = useState(false)        // ← add this
+  const [advisorSuggestion, setAdvisorSuggestion] = useState(null)
+  const [advisorLoading, setAdvisorLoading] = useState(false)
+  const getRisk = (score) => {
+    if (score >= 76) return 'CRITICAL'
+    if (score >= 51) return 'HIGH'
+    if (score >= 26) return 'MEDIUM'
+    return 'LOW'
+  }
 
   useEffect(() => {
     async function load() {
@@ -85,16 +84,11 @@ export default function ExceptionFormPage() {
     }
   }, [form.exceptionTypeId, form.startDate, form.expiryDate, types])
 
-
-  // AI Governance Advisor — Gemini reasons over the actual request context
-  // (justification, system, type) and proposes a safer alternative.
-  // Risk numbers are still computed by our own deterministic risk engine.
   useEffect(() => {
     if (!form.exceptionTypeId) {
       setAdvisorSuggestion(null)
       return
     }
-    // Don't burn API calls until there's enough context to reason about
     if (!form.businessJustification || form.businessJustification.trim().length < 15) {
       setAdvisorSuggestion(null)
       return
@@ -116,7 +110,7 @@ export default function ExceptionFormPage() {
       } finally {
         setAdvisorLoading(false)
       }
-    }, 900) // longer debounce — this hits a live LLM call now, not a lookup table
+    }, 900)
     return () => clearTimeout(timer)
   }, [form.exceptionTypeId, form.startDate, form.expiryDate, form.businessJustification, form.title, form.systemAffected])
 
@@ -166,129 +160,159 @@ export default function ExceptionFormPage() {
   if (pageLoading) return <PageSpinner />
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(isEdit ? `/exceptions/${id}` : '/exceptions')} className="p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-600">
-          <ArrowLeft size={16} />
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
+      <div className="flex items-center gap-4">
+        <button onClick={() => navigate(isEdit ? `/exceptions/${id}` : '/exceptions')} className="p-2.5 rounded-xl text-dark-text/30 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/5 transition-all">
+          <ArrowLeft size={18} />
         </button>
         <div>
-          <h2 className="text-base font-bold text-slate-900">{isEdit ? 'Edit Exception' : 'New Exception Request'}</h2>
-          <p className="text-xs text-slate-500">{isEdit ? 'Update the details of this exception' : 'Submit a new policy exception request for review'}</p>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">{isEdit ? 'Re-config Protocol' : 'Initialize Request'}</h1>
+          <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+            {isEdit ? 'Updating existing exception signature' : 'Encoding a new architectural exception into the governance layer'}
+          </p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          <AlertCircle size={14} className="text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-4">
+          <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
+          <p className="text-xs font-bold text-red-400 uppercase tracking-widest">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader title="Basic Information" />
-          <div className="space-y-4">
-            <FormField label="Exception Title" required>
-              <Input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Brief, descriptive title for this exception" required />
+          <div className="mb-6">
+            <h3 className="text-lg font-display font-bold text-white tracking-tight">Core Parameters</h3>
+            <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-1">Fundamental request identifiers</p>
+          </div>
+          <div className="grid grid-cols-1 gap-6">
+            <FormField label="Protocol Title" required>
+              <Input value={form.title} onChange={e => set('title', e.target.value)} placeholder="Define a descriptive entity signature..." required />
             </FormField>
-            <FormField label="Description">
-              <Textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Additional context or notes (optional)" />
+            <FormField label="Scope Extension">
+              <Textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Provide additional structural context (optional)..." />
             </FormField>
-            <FormField label="Business Justification" required>
-              <Textarea rows={4} value={form.businessJustification} onChange={e => set('businessJustification', e.target.value)} placeholder="Why is this exception necessary? What business need does it serve?" required />
+            <FormField label="Strategic Justification" required>
+              <Textarea rows={4} value={form.businessJustification} onChange={e => set('businessJustification', e.target.value)} placeholder="Define the operational necessity for this protocol divergence..." required />
             </FormField>
-            <FormField label="System Affected" required>
-              <Input value={form.systemAffected} onChange={e => set('systemAffected', e.target.value)} placeholder="Which system, service, or infrastructure is affected?" required />
+            <FormField label="Target Infrastructure" required>
+              <Input value={form.systemAffected} onChange={e => set('systemAffected', e.target.value)} placeholder="Which resource node or sector is affected?" required />
             </FormField>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Classification" />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Exception Type" required>
+          <div className="mb-6">
+            <h3 className="text-lg font-display font-bold text-white tracking-tight">Taxonomy</h3>
+            <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-1">Structural classification and domain ownership</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField label="Exception Class" required>
               <Select value={form.exceptionTypeId} onChange={e => set('exceptionTypeId', e.target.value)} required>
-                <option value="">Select type…</option>
-                {types.map(t => <option key={t.id} value={t.id}>{t.name} (base risk: {t.baseRiskScore})</option>)}
+                <option value="">Select Variant...</option>
+                {types.map(t => <option key={t.id} value={t.id}>{t.name} (Base Index: {t.baseRiskScore})</option>)}
               </Select>
             </FormField>
-            <FormField label="Department" required>
+            <FormField label="Functional Domain" required>
               <Select value={form.departmentId} onChange={e => set('departmentId', e.target.value)} required>
-                <option value="">Select department…</option>
+                <option value="">Select Domain...</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </Select>
             </FormField>
-            <FormField label="Related Policy">
-              <Select value={form.policyId} onChange={e => set('policyId', e.target.value)}>
-                <option value="">None (select if applicable)</option>
-                {policies.map(p => <option key={p.id} value={p.id}>{p.policyCode} — {p.title}</option>)}
-              </Select>
-            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Associated Governance Policy">
+                <Select value={form.policyId} onChange={e => set('policyId', e.target.value)}>
+                  <option value="">Null (Self-contained request)</option>
+                  {policies.map(p => <option key={p.id} value={p.id}>{p.policyCode} — {p.title}</option>)}
+                </Select>
+              </FormField>
+            </div>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Duration" subtitle="Both dates are required before submitting for review" />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Start Date">
+          <div className="mb-6">
+            <h3 className="text-lg font-display font-bold text-white tracking-tight">Temporal Scope</h3>
+            <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-1">Lifecycle boundaries for the requested divergence</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField label="Execution Start">
               <Input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} />
             </FormField>
-            <FormField label="Expiry Date">
+            <FormField label="Operational Expiry">
               <Input type="date" value={form.expiryDate} onChange={e => set('expiryDate', e.target.value)} />
             </FormField>
           </div>
 
-          {previewScore !== null && (
-            <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-slate-700">Estimated Risk Score</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Based on type and duration (approximate)</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold font-mono text-slate-800">{previewScore}</span>
-                  <RiskBadge level={getRisk(previewScore)} />
-                </div>
-              </div>
-            </div>
-          )}
-          {advisorLoading && !advisorSuggestion && (
-            <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center gap-2 text-xs text-indigo-600">
-              <Loader2 size={12} className="animate-spin" /> Asking the AI Governance Advisor…
-            </div>
-          )}
-
-          {advisorSuggestion && (
-            <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Sparkles size={14} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-indigo-900">AI Governance Advisor</p>
-                  <p className="text-xs text-indigo-700 mt-1">{advisorSuggestion.alternative.rationale}</p>
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <span className="text-sm font-bold text-indigo-900">{advisorSuggestion.alternative.label}</span>
-                    <span className="text-xs text-indigo-600">{advisorSuggestion.alternative.durationDays} Days</span>
-                    <span className="flex items-center gap-1 text-xs font-semibold text-green-700">
-                      <TrendingDown size={12} /> Reduces Risk by {advisorSuggestion.alternative.riskReductionPercent}%
-                    </span>
+          {(previewScore !== null || advisorLoading || advisorSuggestion) && (
+            <div className="mt-8 space-y-4">
+              {previewScore !== null && (
+                <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">Analytical Risk Projection</p>
+                    <p className="text-[9px] text-dark-text/20 uppercase tracking-tighter mt-0.5">Automated calculation based on type/duration vectors</p>
                   </div>
-                  <Button variant="primary" size="sm" className="mt-3" onClick={applyAdvisorSuggestion}>
-                    Apply Suggestion
-                  </Button>
+                  <div className="flex items-center gap-4">
+                    <span className="text-3xl font-display font-bold text-white tracking-tighter">{previewScore}</span>
+                    <RiskBadge level={getRisk(previewScore)} />
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {advisorLoading && !advisorSuggestion && (
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl flex items-center gap-3 text-[10px] font-bold text-primary-light uppercase tracking-widest shadow-[0_0_20px_rgba(79,70,229,0.05)]">
+                  <div className="w-5 h-5 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                  Synchronizing with Governance AI...
+                </div>
+              )}
+
+              {advisorSuggestion && (
+                <div className="p-6 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Sparkles size={80} />
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                      <Sparkles size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-bold text-primary-light uppercase tracking-widest">Architectural Advisor</p>
+                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[9px] font-bold uppercase tracking-widest border border-emerald-500/20">
+                          <TrendingDown size={12} /> -{advisorSuggestion.alternative.riskReductionPercent}% Risk Vector
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-white leading-relaxed">{advisorSuggestion.alternative.rationale}</p>
+
+                      <div className="flex items-center gap-6 mt-4 p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-dark-text/30 uppercase tracking-widest">Proposal</span>
+                          <span className="text-xs font-bold text-white mt-1">{advisorSuggestion.alternative.label}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-dark-text/30 uppercase tracking-widest">Interval</span>
+                          <span className="text-xs font-bold text-white mt-1">{advisorSuggestion.alternative.durationDays} Cycles</span>
+                        </div>
+                      </div>
+
+                      <Button variant="primary" size="md" className="mt-6" onClick={applyAdvisorSuggestion}>
+                        Sync Architectural Proposal
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={() => navigate(isEdit ? `/exceptions/${id}` : '/exceptions')}>
-            Cancel
+            Abort
           </Button>
-          <Button type="submit" variant="primary" loading={loading}>
-            {isEdit ? 'Save Changes' : 'Create Exception'}
+          <Button type="submit" variant="primary" loading={loading} className="px-10">
+            {isEdit ? 'Commit Changes' : 'Execute Request'}
           </Button>
         </div>
       </form>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, XCircle, HelpCircle, Eye, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, HelpCircle, Eye, AlertTriangle, Building, User } from 'lucide-react'
 import { approvalsApi } from '../api/approvals.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useFetch } from '../hooks/useFetch.js'
@@ -16,36 +16,52 @@ function ApprovalCard({ approval, onAction }) {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-4">
+    <div className="glass-card p-6 hover:bg-white/[0.04] transition-all group border-white/5 hover:border-primary/20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge color={approval.approvalRole === 'MANAGER' ? 'blue' : 'purple'}>
-              {approval.approvalRole === 'MANAGER' ? 'Manager Review' : 'Security Review'}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <Badge color={approval.approvalRole === 'MANAGER' ? 'secondary' : 'accent'}>
+              {approval.approvalRole === 'MANAGER' ? 'Manager Review' : 'CSO Review'}
             </Badge>
             {exc && <StatusBadge status={exc.status} />}
           </div>
-          <h3 className="text-sm font-semibold text-slate-900 mt-1.5">{exc?.title || '—'}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{exc?.department?.name} · Requester: {exc?.requester?.name}</p>
+          <h3 className="text-lg font-display font-bold text-white tracking-tight group-hover:text-primary transition-colors">{exc?.title || '—'}</h3>
+          <div className="flex items-center gap-2 mt-2 text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">
+            <Building size={12} /> {exc?.department?.name}
+            <span className="opacity-20">/</span>
+            <User size={12} /> {exc?.requester?.name}
+          </div>
 
-          <div className="flex items-center gap-4 mt-3">
+          <div className="flex flex-wrap items-center gap-6 mt-6">
             {exc && <RiskBadge level={exc.riskLevel} />}
-            {exc && <span className="text-xs text-slate-500">Score: <span className="font-mono font-semibold">{exc.riskScore}</span></span>}
-            {exc?.expiryDate && <span className="text-xs text-slate-400">Expires: {formatDate(exc.expiryDate)}</span>}
+            {exc && (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-dark-text/30 uppercase tracking-tighter">Analytical Index</span>
+                <span className="text-sm font-mono font-bold text-white leading-none mt-1">{exc.riskScore}</span>
+              </div>
+            )}
+            {exc?.expiryDate && (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-dark-text/30 uppercase tracking-tighter">Operational Expiry</span>
+                <span className="text-sm font-bold text-white leading-none mt-1">{formatDate(exc.expiryDate)}</span>
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/exceptions/${exc?.id}`)}>
-            <Eye size={12} /> View
+
+        <div className="flex flex-wrap items-center gap-2 md:bg-white/[0.02] md:p-2 md:rounded-2xl border-white/5 self-start md:self-center">
+          <Button variant="secondary" size="md" onClick={() => navigate(`/exceptions/${exc?.id}`)}>
+            <Eye size={18} /> Review
           </Button>
-          <Button variant="success" size="sm" onClick={() => onAction('approve', approval)}>
-            <CheckCircle size={12} /> Approve
+          <div className="w-px h-6 bg-white/5 hidden md:block" />
+          <Button variant="primary" size="md" onClick={() => onAction('approve', approval)}>
+            <CheckCircle size={18} /> Approve
           </Button>
-          <Button variant="warning" size="sm" onClick={() => onAction('info', approval)}>
-            <HelpCircle size={12} /> Info
+          <Button variant="secondary" size="md" onClick={() => onAction('info', approval)}>
+            <HelpCircle size={18} /> Request Data
           </Button>
-          <Button variant="danger" size="sm" onClick={() => onAction('reject', approval)}>
-            <XCircle size={12} /> Reject
+          <Button variant="danger" size="md" onClick={() => onAction('reject', approval)}>
+            <XCircle size={18} /> Reject
           </Button>
         </div>
       </div>
@@ -110,97 +126,102 @@ export default function ApprovalsPage() {
   if (loading) return <PageSpinner />
   if (error) return <ErrorMessage message={error} />
 
-  const title = modal?.type === 'approve' ? 'Approve Exception' : modal?.type === 'reject' ? 'Reject Exception' : 'Request More Information'
-  const btnVariant = modal?.type === 'approve' ? 'success' : modal?.type === 'reject' ? 'danger' : 'warning'
-  const btnLabel = modal?.type === 'approve' ? 'Approve' : modal?.type === 'reject' ? 'Reject' : 'Request Info'
+  const title = modal?.type === 'approve' ? 'Architecture Approval' : modal?.type === 'reject' ? 'Terminate Request' : 'Information Query'
+  const btnVariant = modal?.type === 'approve' ? 'primary' : modal?.type === 'reject' ? 'danger' : 'secondary'
+  const btnLabel = modal?.type === 'approve' ? 'Confirm Approval' : modal?.type === 'reject' ? 'Confirm Rejection' : 'Send Information Request'
 
   return (
-    <div className="space-y-5">
-      {/* Summary */}
-      <div className="flex items-center gap-3">
-        <div className="bg-amber-100 rounded-lg px-4 py-2">
-          <p className="text-xs font-semibold text-amber-800">{pending.length} pending</p>
+    <div className="space-y-8 animate-fade-in">
+      {/* Dynamic Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">Consensus Queue</h1>
+          <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+            Nodes requiring regulatory decision in current sector
+          </p>
         </div>
-        {pending.length === 0 && (
-          <p className="text-sm text-slate-500">Queue is clear — no pending approvals.</p>
-        )}
+        <div className={`px-4 py-2 rounded-xl flex items-center gap-3 border transition-all ${pending.length > 0 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+          <div className={`w-2 h-2 rounded-full animate-pulse ${pending.length > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em]">{pending.length} Outstanding Decision{pending.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
       {pending.length === 0 ? (
-        <Card>
-          <div className="py-12 text-center">
-            <CheckCircle size={32} className="text-green-400 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-600">All caught up!</p>
-            <p className="text-xs text-slate-400 mt-1">No pending approvals in your queue.</p>
+        <Card className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+            <CheckCircle size={40} />
           </div>
+          <p className="text-xl font-display font-semibold text-white tracking-tight">Queue Synchronized</p>
+          <p className="text-sm text-dark-text/40 mt-2 max-w-sm font-medium italic">Consensus reached for all active exception signatures in your domain.</p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {pending.map((a) => (
             <ApprovalCard key={a.id} approval={a} onAction={openModal} />
           ))}
         </div>
       )}
 
-      {/* Action Modal */}
+      {/* Decision Engine Modal */}
       <Modal open={!!modal} onClose={() => setModal(null)} title={title} size="sm">
         {modal && (
-          <div className="space-y-4">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="text-xs font-semibold text-slate-700">{modal.approval.exception?.title}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">{modal.approval.exception?.department?.name}</p>
-              <div className="flex items-center gap-2 mt-2">
+          <div className="space-y-6">
+            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+              <div className="flex items-center gap-2 mb-2">
                 <RiskBadge level={modal.approval.exception?.riskLevel} />
-                <span className="text-xs text-slate-500">Score: {modal.approval.exception?.riskScore}</span>
+                <span className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">Index: {modal.approval.exception?.riskScore}</span>
               </div>
+              <p className="text-sm font-bold text-white leading-tight">{modal.approval.exception?.title}</p>
+              <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-1">{modal.approval.exception?.department?.name}</p>
             </div>
 
             {actionError && <ErrorMessage message={actionError} />}
 
-            <FormField label={modal.type === 'info' ? 'Information Requested' : 'Comments'}>
+            <FormField label={modal.type === 'info' ? 'Query Parameters' : 'Analytical Comments'}>
               <Textarea
                 value={comments}
                 onChange={e => setComments(e.target.value)}
                 placeholder={
-                  modal.type === 'approve' ? 'Approval notes (optional)…' :
-                  modal.type === 'reject' ? 'Reason for rejection (required)…' :
-                  'What additional information do you need?'
+                  modal.type === 'approve' ? 'Approval rationale (optional)...' :
+                    modal.type === 'reject' ? 'Architectural disqualification reason (required)...' :
+                      'Define required dataset parameters...'
                 }
-                rows={3}
               />
             </FormField>
 
             {modal.type === 'approve' && canOverride && (
-              <div className="border-t border-slate-100 pt-3 space-y-3">
-                <p className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                  <AlertTriangle size={12} className="text-amber-500" /> Risk Score Override (Security Reviewer)
-                </p>
-                <FormField label="Override Risk Score (0–100)">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={overrideScore}
-                    onChange={e => setOverrideScore(e.target.value)}
-                    placeholder="Leave blank to use calculated score"
-                  />
-                </FormField>
-                {overrideScore && (
-                  <FormField label="Override Reason">
-                    <Textarea
-                      value={overrideReason}
-                      onChange={e => setOverrideReason(e.target.value)}
-                      placeholder="Explain why the risk score is being overridden…"
-                      rows={2}
+              <div className="border-t border-white/5 pt-6 space-y-4">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-orange-400 uppercase tracking-widest">
+                  <AlertTriangle size={14} className="animate-pulse" /> Security Intelligence Override
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField label="Manual Risk Normalization (0–100)">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={overrideScore}
+                      onChange={e => setOverrideScore(e.target.value)}
+                      placeholder="Input normalized analytical index"
                     />
                   </FormField>
-                )}
+                  {overrideScore && (
+                    <FormField label="Override Justification">
+                      <Textarea
+                        value={overrideReason}
+                        onChange={e => setOverrideReason(e.target.value)}
+                        placeholder="Regulatory justification for index normalization..."
+                        rows={2}
+                      />
+                    </FormField>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancel</Button>
-              <Button variant={btnVariant} size="sm" loading={actionLoading} onClick={handleAction}>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="secondary" onClick={() => setModal(null)}>Abort</Button>
+              <Button variant={btnVariant} loading={actionLoading} onClick={handleAction}>
                 {btnLabel}
               </Button>
             </div>

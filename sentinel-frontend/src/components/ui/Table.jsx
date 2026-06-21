@@ -1,9 +1,10 @@
 import React from 'react'
+import { Shield } from 'lucide-react'
 
 export function Table({ columns, data, loading, empty = 'No data found', onRowClick }) {
   if (loading) {
     return (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-sm">
           <thead>
             <tr>
@@ -16,10 +17,10 @@ export function Table({ columns, data, loading, empty = 'No data found', onRowCl
           </thead>
           <tbody>
             {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className="border-b border-slate-100">
+              <tr key={i} className="border-b border-dark-border/20">
                 {columns.map((col) => (
                   <td key={col.key} className="table-cell">
-                    <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-white/5 rounded-lg animate-pulse w-3/4" />
                   </td>
                 ))}
               </tr>
@@ -32,7 +33,7 @@ export function Table({ columns, data, loading, empty = 'No data found', onRowCl
 
   if (!data || data.length === 0) {
     return (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-sm">
           <thead>
             <tr>
@@ -44,8 +45,11 @@ export function Table({ columns, data, loading, empty = 'No data found', onRowCl
             </tr>
           </thead>
         </table>
-        <div className="py-16 text-center">
-          <p className="text-sm text-slate-400">{empty}</p>
+        <div className="py-20 text-center animate-fade-in">
+          <div className="inline-flex p-4 rounded-full bg-white/5 mb-4">
+            <Shield size={32} className="text-dark-text/10" />
+          </div>
+          <p className="text-sm text-dark-text/30 font-medium tracking-tight">{empty}</p>
         </div>
       </div>
     )

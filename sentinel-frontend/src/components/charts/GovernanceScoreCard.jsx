@@ -1,35 +1,58 @@
 import React from 'react'
 import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, CheckSquare, AlertOctagon } from 'lucide-react'
 import { Card } from '../ui/Card.jsx'
+import { Button } from '../ui/Button.jsx'
 
 const GRADE_COLORS = {
-    A: { text: 'text-green-700', bg: 'bg-green-100', bar: 'bg-green-500' },
-    B: { text: 'text-emerald-700', bg: 'bg-emerald-100', bar: 'bg-emerald-500' },
-    C: { text: 'text-amber-700', bg: 'bg-amber-100', bar: 'bg-amber-500' },
-    D: { text: 'text-orange-700', bg: 'bg-orange-100', bar: 'bg-orange-500' },
-    F: { text: 'text-red-700', bg: 'bg-red-100', bar: 'bg-red-500' },
+    A: { text: 'text-emerald-400', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', glow: 'shadow-emerald-500/20' },
+    B: { text: 'text-secondary', bg: 'bg-secondary/10', bar: 'bg-secondary', glow: 'shadow-secondary/20' },
+    C: { text: 'text-amber-400', bg: 'bg-amber-500/10', bar: 'bg-amber-500', glow: 'shadow-amber-500/20' },
+    D: { text: 'text-orange-400', bg: 'bg-orange-500/10', bar: 'bg-orange-500', glow: 'shadow-orange-500/20' },
+    F: { text: 'text-red-400', bg: 'bg-red-500/10', bar: 'bg-red-500', glow: 'shadow-red-500/20' },
 }
 
-function ScoreRing({ score, grade, size = 56 }) {
+function ScoreRing({ score, grade, size = 64 }) {
     const colors = GRADE_COLORS[grade] || GRADE_COLORS.C
+    const radius = (size - 8) / 2
+    const circ = 2 * Math.PI * radius
+    const strokeDashoffset = circ - (circ * score) / 100
+
     return (
-        <div className={`flex-shrink-0 flex items-center justify-center rounded-full ${colors.bg}`} style={{ width: size, height: size }}>
-            <span className={`text-base font-bold ${colors.text}`}>{score}</span>
+        <div className="relative flex items-center justify-center group" style={{ width: size, height: size }}>
+            <svg className="absolute -rotate-90 w-full h-full">
+                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth="4" className="text-white/5" />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    strokeDasharray={circ}
+                    style={{ strokeDashoffset }}
+                    className={`${colors.text} transition-all duration-1000 ease-out`}
+                />
+            </svg>
+            <span className={`text-base font-display font-bold text-white`}>{score}</span>
         </div>
     )
 }
 
 function FactorRow({ icon: Icon, label, detail, penalty }) {
     return (
-        <div className="flex items-center justify-between py-1.5">
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-                <Icon size={12} className="text-slate-400" />
-                <span>{label}</span>
+        <div className="flex items-center justify-between py-3 group">
+            <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-white/5 text-dark-text/30 group-hover:bg-white/10 group-hover:text-white transition-all">
+                    <Icon size={14} />
+                </div>
+                <div>
+                    <p className="text-xs font-semibold text-white/80">{label}</p>
+                    <p className="text-[10px] text-dark-text/30 font-medium tracking-wide">{detail}</p>
+                </div>
             </div>
             <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400">{detail}</span>
-                <span className={`text-xs font-mono font-semibold ${penalty > 0 ? 'text-red-600' : 'text-slate-300'}`}>
-                    -{penalty}
+                <span className={`text-xs font-mono font-bold ${penalty > 0 ? 'text-red-400' : 'text-dark-text/20'}`}>
+                    {penalty > 0 ? `-${penalty}` : '0'}
                 </span>
             </div>
         </div>
@@ -41,37 +64,27 @@ export function DepartmentScoreCard({ dept }) {
     const { breakdown } = dept
 
     return (
-        <Card>
-            <div className="flex items-start justify-between mb-3">
+        <Card className="hover:border-white/10">
+            <div className="flex items-start justify-between mb-6">
                 <div>
-                    <p className="text-sm font-semibold text-slate-900">{dept.departmentName}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                        {dept.totalExceptions} exception{dept.totalExceptions !== 1 ? 's' : ''} tracked
+                    <h3 className="text-lg font-display font-semibold text-white tracking-tight">{dept.departmentName}</h3>
+                    <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+                        {dept.totalExceptions} active exceptions Node
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${colors.bg} ${colors.text}`}>{dept.grade}</span>
-                    <ScoreRing score={dept.score} grade={dept.grade} />
-                </div>
+                <ScoreRing score={dept.score} grade={dept.grade} />
             </div>
 
-            <div className="h-1.5 bg-slate-100 rounded-full mb-3">
-                <div className={`h-1.5 rounded-full ${colors.bar} transition-all`} style={{ width: `${dept.score}%` }} />
-            </div>
-
-            <div className="divide-y divide-slate-50 border-t border-slate-100 pt-1">
-                <FactorRow icon={AlertOctagon} label="Expired exceptions"
-                    detail={`${breakdown.expiredExceptions.count}/${breakdown.expiredExceptions.total || 0}`}
+            <div className="space-y-1 divide-y divide-white/5 border-t border-white/5 mt-4">
+                <FactorRow icon={AlertOctagon} label="Expired Exceptions"
+                    detail={`${breakdown.expiredExceptions.count} items requiring review`}
                     penalty={breakdown.expiredExceptions.penalty} />
-                <FactorRow icon={RefreshCw} label="Late renewals"
-                    detail={`${breakdown.lateRenewals.count} flagged`}
+                <FactorRow icon={RefreshCw} label="Renewal Latency"
+                    detail={`${breakdown.lateRenewals.count} cycles delayed`}
                     penalty={breakdown.lateRenewals.penalty} />
-                <FactorRow icon={CheckSquare} label="Approval quality"
-                    detail={`${breakdown.approvalQuality.reworkCount}/${breakdown.approvalQuality.decidedCount} reworked`}
+                <FactorRow icon={CheckSquare} label="Decision Quality"
+                    detail={`${breakdown.approvalQuality.reworkCount} policy reworks`}
                     penalty={breakdown.approvalQuality.penalty} />
-                <FactorRow icon={ShieldAlert} label="Audit findings"
-                    detail={`${breakdown.auditFindings.count} open`}
-                    penalty={breakdown.auditFindings.penalty} />
             </div>
         </Card>
     )
@@ -82,20 +95,33 @@ export function GovernanceScoreSummary({ score, grade }) {
     const Icon = score >= 75 ? ShieldCheck : score >= 40 ? ShieldAlert : ShieldX
 
     return (
-        <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colors.bg}`}>
-                <Icon size={24} className={colors.text} />
-            </div>
-            <div className="flex-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Governance Credit Score</p>
-                <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-3xl font-bold text-slate-900">{score}</span>
-                    <span className="text-sm text-slate-400">/ 100</span>
-                    <span className={`ml-2 px-2 py-0.5 rounded-md text-xs font-bold ${colors.bg} ${colors.text}`}>
-                        Grade {grade}
-                    </span>
+        <div className="glass-card p-6 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-32 h-32 ${colors.bg} blur-[80px] -z-10 opacity-50`} />
+
+            <div className="relative">
+                <ScoreRing score={score} grade={grade} size={96} />
+                <div className={`absolute -top-2 -right-2 w-8 h-8 rounded-full ${colors.bg} ${colors.text} flex items-center justify-center border-2 border-dark-card shadow-lg`}>
+                    <Icon size={16} />
                 </div>
             </div>
+
+            <div className="flex-1 text-center md:text-left">
+                <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mb-1">Organization Governance Index</p>
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <h2 className="text-4xl font-display font-bold text-white tracking-tighter">
+                        System Score: {score}<span className="text-lg opacity-20 ml-1">/100</span>
+                    </h2>
+                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold border uppercase tracking-widest ${colors.bg} ${colors.text} border-white/5`}>
+                        Operational Grade: {grade}
+                    </div>
+                </div>
+                <p className="mt-3 text-xs text-dark-text/40 font-medium max-w-lg">
+                    Current governance posture is within <span className={colors.text}>{grade}</span> parameters.
+                    {score < 70 ? ' Remediation recommended for expiring assets.' : ' System performing within nominal security tolerance.'}
+                </p>
+            </div>
+
+            <Button variant="secondary" size="sm" className="hidden md:flex">Executive Summary</Button>
         </div>
     )
 }

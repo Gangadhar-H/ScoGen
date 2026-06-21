@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Edit, Trash2, Send, RefreshCw, XCircle,
-  Shield, Clock, CheckCircle, AlertTriangle, User, Building, Calendar
+  Shield, Clock, CheckCircle, AlertTriangle, User, Building, Calendar,
+  AlertOctagon
 } from 'lucide-react'
 import { exceptionsApi } from '../api/exceptions.js'
 import { auditApi } from '../api/audit.js'
@@ -30,21 +31,23 @@ function TimelineEvent({ action, user, timestamp, oldValue, newValue }) {
   const Icon = ACTION_ICONS[action] || Clock
 
   return (
-    <div className="flex gap-3">
-      <div className="flex-shrink-0 mt-0.5">
-        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-          <Icon size={12} className="text-slate-500" />
+    <div className="flex gap-4 relative group">
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center transition-colors group-hover:border-primary/30 z-10">
+          <Icon size={14} className="text-dark-text/40 group-hover:text-primary transition-colors" />
         </div>
+        <div className="w-0.5 h-full bg-white/5 group-last:bg-transparent -mt-1" />
       </div>
-      <div className="flex-1 pb-4 border-l border-slate-200 pl-3 -ml-3.5 pt-0.5">
-        <p className="text-xs font-semibold text-slate-800">{action.replace(/_/g, ' ')}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">
-          {user?.name || 'System'} · {formatDateTime(timestamp)}
+      <div className="flex-1 pb-8">
+        <p className="text-xs font-bold text-white uppercase tracking-widest">{action.replace(/_/g, ' ')}</p>
+        <p className="text-[10px] text-dark-text/30 font-medium mt-1">
+          {user?.name || 'Governance Engine'} <span className="mx-1.5 opacity-20">/</span> {formatDateTime(timestamp)}
         </p>
-        {newValue?.status && (
-          <p className="text-[10px] text-slate-500 mt-1">
-            → <StatusBadge status={newValue.status} />
-          </p>
+        {(newValue?.status || newValue?.riskLevel) && (
+          <div className="mt-3 flex items-center gap-2">
+            {newValue.status && <StatusBadge status={newValue.status} />}
+            {newValue.riskLevel && <RiskBadge level={newValue.riskLevel} />}
+          </div>
         )}
       </div>
     </div>
@@ -54,13 +57,13 @@ function TimelineEvent({ action, user, timestamp, oldValue, newValue }) {
 function RiskBar({ label, value, max = 100 }) {
   const pct = Math.min(100, (value / max) * 100)
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-slate-600">{label}</span>
-        <span className="font-mono font-medium text-slate-800">{value}</span>
+    <div className="space-y-2">
+      <div className="flex justify-between items-baseline">
+        <span className="text-[10px] font-bold text-dark-text/40 uppercase tracking-widest">{label}</span>
+        <span className="text-xs font-mono font-bold text-white">{value}<span className="text-[10px] opacity-20 ml-0.5">/{max}</span></span>
       </div>
-      <div className="h-1.5 bg-slate-100 rounded-full">
-        <div className="h-1.5 bg-brand-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full transition-all duration-1000 shadow-lg shadow-primary/20" style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -159,50 +162,58 @@ export default function ExceptionDetailPage() {
   const compliance = exception.exceptionType?.complianceJunctions || []
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <button onClick={() => navigate('/exceptions')} className="mt-0.5 p-1.5 rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-600">
-            <ArrowLeft size={16} />
+    <div className="space-y-8 animate-fade-in">
+      {/* Header Navigation */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="flex items-start gap-4">
+          <button
+            onClick={() => navigate('/exceptions')}
+            className="mt-1 p-2 rounded-xl bg-white/5 text-dark-text/40 hover:bg-white/10 hover:text-white transition-all shadow-lg"
+          >
+            <ArrowLeft size={20} />
           </button>
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <StatusBadge status={exception.status} />
               <RiskBadge level={exception.riskLevel} />
-              {exception.isCritical && <Badge color="red">Critical</Badge>}
+              {exception.isCritical && <Badge color="red">Critical Payload</Badge>}
+              <span className="text-[10px] font-bold text-dark-text/20 uppercase tracking-[0.2em] ml-2">Node ID: {exception.id.slice(0, 8)}</span>
             </div>
-            <h2 className="text-base font-bold text-slate-900 max-w-2xl">{exception.title}</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Requested by {exception.requester?.name} · {exception.department?.name} · Created {formatDate(exception.createdAt)}
-            </p>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight leading-tight">{exception.title}</h1>
+            <div className="flex items-center gap-2 mt-3 text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">
+              <User size={12} /> {exception.requester?.name}
+              <span className="opacity-20">/</span>
+              <Building size={12} /> {exception.department?.name}
+              <span className="opacity-20">/</span>
+              <Calendar size={12} /> Initialized {formatDate(exception.createdAt)}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-2xl">
           {canEdit && (
-            <Button variant="secondary" size="sm" onClick={() => navigate(`/exceptions/${id}/edit`)}>
-              <Edit size={12} /> Edit
+            <Button variant="secondary" size="md" onClick={() => navigate(`/exceptions/${id}/edit`)}>
+              <Edit size={16} /> Edit Node
             </Button>
           )}
           {canSubmit && (
-            <Button variant="primary" size="sm" loading={actionLoading} onClick={handleSubmit}>
-              <Send size={12} /> Submit for Review
+            <Button variant="primary" size="md" loading={actionLoading} onClick={handleSubmit}>
+              <Send size={16} /> Submit Repository
             </Button>
           )}
           {canRenew && (
-            <Button variant="secondary" size="sm" loading={actionLoading} onClick={handleRenew}>
-              <RefreshCw size={12} /> Renew
+            <Button variant="secondary" size="md" loading={actionLoading} onClick={handleRenew}>
+              <RefreshCw size={16} /> Renew Lease
             </Button>
           )}
           {canRevoke && (
-            <Button variant="danger" size="sm" onClick={() => setModal('revoke')}>
-              <XCircle size={12} /> Revoke
+            <Button variant="danger" size="md" onClick={() => setModal('revoke')}>
+              <XCircle size={16} /> Terminate
             </Button>
           )}
           {canDelete && (
-            <Button variant="ghost" size="sm" onClick={() => setModal('delete')}>
-              <Trash2 size={12} /> Delete
+            <Button variant="ghost" size="md" onClick={() => setModal('delete')} className="text-red-400 hover:bg-red-400/10 hover:text-red-300">
+              <Trash2 size={16} /> Wipe
             </Button>
           )}
         </div>
@@ -210,98 +221,117 @@ export default function ExceptionDetailPage() {
 
       {error && <ErrorMessage message={error} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main details */}
-        <div className="lg:col-span-2 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main analytical container */}
+        <div className="lg:col-span-8 space-y-8">
           <Card>
-            <CardHeader title="Exception Details" />
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Type</p>
-                <p className="text-slate-800">{exception.exceptionType?.name}</p>
+            <CardHeader title="Analytical Overview" subtitle="Operational parameters and system definitions" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Core Framework</p>
+                <p className="text-sm text-white font-semibold">{exception.exceptionType?.name}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Policy</p>
-                <p className="text-slate-800">{exception.policy ? `${exception.policy.policyCode} — ${exception.policy.title}` : '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">System Affected</p>
-                <p className="text-slate-800">{exception.systemAffected}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Renewal Count</p>
-                <p className="text-slate-800">{exception.renewalCount}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Start Date</p>
-                <p className="text-slate-800">{formatDate(exception.startDate)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-0.5">Expiry Date</p>
-                <p className="text-slate-800 flex items-center gap-2">
-                  {formatDate(exception.expiryDate)}
-                  <ExpiryCountdown expiryDate={exception.expiryDate} />
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Policy Reference</p>
+                <p className="text-sm text-white font-semibold truncate">
+                  {exception.policy ? (
+                    <span className="flex items-center gap-2">
+                      <span className="text-primary-light">{exception.policy.policyCode}</span>
+                      <span className="opacity-20">|</span>
+                      {exception.policy.title}
+                    </span>
+                  ) : <span className="opacity-20 font-normal">No policy signature</span>}
                 </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Affected Node</p>
+                <p className="text-sm text-white font-semibold">{exception.systemAffected || 'Universal Node'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Lifecycle Iteration</p>
+                <p className="text-sm text-white font-semibold">{exception.renewalCount} Cycles</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Activation Timestamp</p>
+                <p className="text-sm text-white font-semibold">{formatDate(exception.startDate)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest">Temporal Termination</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-white font-semibold">{formatDate(exception.expiryDate)}</p>
+                  <div className="scale-90 opacity-60"><ExpiryCountdown expiryDate={exception.expiryDate} /></div>
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-              <div>
-                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Business Justification</p>
-                <p className="text-sm text-slate-700 leading-relaxed">{exception.businessJustification}</p>
+            <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
+              <div className="p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mb-2 px-1">Governance Justification</p>
+                <p className="text-sm text-dark-text/80 leading-relaxed font-medium">{exception.businessJustification}</p>
               </div>
               {exception.description && (
-                <div>
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Description</p>
-                  <p className="text-sm text-slate-700 leading-relaxed">{exception.description}</p>
+                <div className="px-1">
+                  <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mb-2 font-display">Technical Description</p>
+                  <p className="text-sm text-dark-text/60 leading-relaxed">{exception.description}</p>
                 </div>
               )}
             </div>
           </Card>
 
-          {/* Approval history */}
+          {/* Decision Timeline */}
           {exception.approvals?.length > 0 && (
             <Card>
-              <CardHeader title="Approval History" />
+              <CardHeader title="Policy Decisions" subtitle="Official overrides and regulatory consensus" />
               <div className="space-y-3">
                 {exception.approvals.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${a.decision === 'APPROVED' ? 'bg-green-500' :
-                      a.decision === 'REJECTED' ? 'bg-red-500' :
-                        a.decision === 'MORE_INFO' ? 'bg-amber-500' : 'bg-slate-300'
-                      }`} />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {a.approvalRole === 'MANAGER' ? 'Manager Review' : 'Security Review'}
-                        </p>
-                        <Badge color={a.decision === 'APPROVED' ? 'green' : a.decision === 'REJECTED' ? 'red' : a.decision === 'MORE_INFO' ? 'yellow' : 'slate'}>
-                          {a.decision}
-                        </Badge>
+                  <div key={a.id} className="group relative overflow-hidden p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg bg-white/5 ${a.decision === 'APPROVED' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {a.decision === 'APPROVED' ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white uppercase tracking-widest">
+                            {a.approvalRole === 'MANAGER' ? 'Unit Manager Approval' : 'CSO Review'}
+                          </p>
+                          <p className="text-[10px] text-dark-text/30 font-medium mt-0.5">{a.approver?.name || 'System Node'}</p>
+                        </div>
                       </div>
-                      {a.approver && <p className="text-[10px] text-slate-400 mt-0.5">{a.approver.name}</p>}
-                      {a.comments && <p className="text-xs text-slate-600 mt-1 italic">"{a.comments}"</p>}
-                      {a.overrideRiskScore != null && (
-                        <p className="text-xs text-orange-600 mt-1">Risk overridden to {a.overrideRiskScore}</p>
-                      )}
+                      <Badge color={a.decision === 'APPROVED' ? 'green' : a.decision === 'REJECTED' ? 'red' : 'yellow'}>
+                        {a.decision}
+                      </Badge>
                     </div>
+                    {a.comments && (
+                      <div className="pl-11">
+                        <p className="text-sm text-dark-text/60 italic font-medium leading-relaxed border-l-2 border-white/5 pl-4 ml-1">
+                          "{a.comments}"
+                        </p>
+                      </div>
+                    )}
+                    {a.overrideRiskScore != null && (
+                      <div className="mt-4 pl-11 flex items-center gap-2 text-[10px] font-bold text-orange-400/70 tracking-widest uppercase">
+                        <AlertTriangle size={12} /> Manual Risk Override: Index {a.overrideRiskScore}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </Card>
           )}
 
-          {/* Compliance mapping */}
+          {/* Compliance Network */}
           {compliance.length > 0 && (
             <Card>
-              <CardHeader title="Compliance Framework Mapping" />
-              <div className="space-y-2">
+              <CardHeader title="Control Alignment" subtitle="Mapped regulatory framework junctions" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {compliance.map((j) => (
-                  <div key={j.id} className="flex items-center gap-3 p-3 border border-slate-100 rounded-lg">
-                    <Shield size={14} className="text-brand-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-semibold text-slate-800">{j.framework?.name}</p>
-                      <p className="text-[10px] text-slate-400">{j.framework?.controlCode} — {j.framework?.description}</p>
+                  <div key={j.id} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl group hover:border-primary/20 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary-light transition-transform group-hover:scale-110">
+                      <Shield size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate uppercase tracking-widest">{j.framework?.name}</p>
+                      <p className="text-[10px] text-dark-text/30 font-medium truncate mt-0.5">{j.framework?.controlCode} — {j.framework?.description}</p>
                     </div>
                   </div>
                 ))}
@@ -310,98 +340,109 @@ export default function ExceptionDetailPage() {
           )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-5">
-          {/* Risk assessment */}
+        {/* Intelligence Sidebar */}
+        <div className="lg:col-span-4 space-y-8">
+          {/* Risk Intelligence */}
           {exception.riskAssessment && (
-            <Card>
-              <CardHeader title="Risk Breakdown" />
-              <div className="mb-4 text-center">
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${exception.riskLevel === 'CRITICAL' ? 'bg-red-100' :
-                  exception.riskLevel === 'HIGH' ? 'bg-orange-100' :
-                    exception.riskLevel === 'MEDIUM' ? 'bg-amber-100' : 'bg-green-100'
-                  }`}>
-                  <span className={`text-xl font-bold ${exception.riskLevel === 'CRITICAL' ? 'text-red-700' :
-                    exception.riskLevel === 'HIGH' ? 'text-orange-700' :
-                      exception.riskLevel === 'MEDIUM' ? 'text-amber-700' : 'text-green-700'
-                    }`}>{exception.riskScore}</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Risk Score</p>
-              </div>
-              <div className="space-y-3">
-                <RiskBar label="Type Risk" value={exception.riskAssessment.typeRisk} max={70} />
-                <RiskBar label="Duration Risk" value={exception.riskAssessment.durationRisk} max={50} />
-                <RiskBar label="Renewal Risk" value={exception.riskAssessment.renewalRisk} max={15} />
-                {exception.riskAssessment.approvalBonus > 0 && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-green-600">Approval Bonus</span>
-                      <span className="font-mono font-medium text-green-700">-{exception.riskAssessment.approvalBonus}</span>
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[80px] -z-10" />
+              <CardHeader title="Risk Profile" />
+              <div className="mb-10 flex flex-col items-center">
+                <div className="relative">
+                  <div className={`w-28 h-28 rounded-full border-4 flex items-center justify-center transition-all duration-1000 ${exception.riskLevel === 'CRITICAL' ? 'border-red-500/20 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.15)]' :
+                    exception.riskLevel === 'HIGH' ? 'border-orange-500/20 text-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.15)]' :
+                      'border-emerald-500/20 text-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+                    }`}>
+                    <div className="text-center">
+                      <span className="text-4xl font-display font-bold leading-none">{exception.riskScore}</span>
+                      <p className="text-[10px] font-bold uppercase tracking-tighter opacity-40 mt-1">Index</p>
                     </div>
+                  </div>
+                </div>
+                <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-[0.2em] mt-4">Security Level: <span className="text-white">{exception.riskLevel}</span></p>
+              </div>
+
+              <div className="space-y-5">
+                <RiskBar label="Architecture Vector" value={exception.riskAssessment.typeRisk} max={70} />
+                <RiskBar label="Temporal Duration" value={exception.riskAssessment.durationRisk} max={50} />
+                <RiskBar label="Repetition Factor" value={exception.riskAssessment.renewalRisk} max={15} />
+                {exception.riskAssessment.approvalBonus > 0 && (
+                  <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Compliance Bonus</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400">-{exception.riskAssessment.approvalBonus}</span>
                   </div>
                 )}
               </div>
+
               {exception.riskAssessment.assessmentNotes && (
-                <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100 pt-2">{exception.riskAssessment.assessmentNotes}</p>
+                <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-widest mt-8 border-t border-white/5 pt-4 text-center">
+                  System generated analytical notes observed
+                </p>
               )}
             </Card>
           )}
 
-          {/* Anomaly flags */}
+          {/* Anomaly Detection */}
           {exception.anomalyFlags?.filter(f => !f.isResolved).length > 0 && (
-            <Card>
-              <CardHeader title="Anomaly Flags" />
-              <div className="space-y-2">
+            <Card className="border-red-500/20 shadow-lg shadow-red-500/5">
+              <CardHeader title="Security Anomalies" />
+              <div className="space-y-3">
                 {exception.anomalyFlags.filter(f => !f.isResolved).map((f) => (
-                  <div key={f.id} className={`p-3 rounded-lg border text-xs ${f.severity === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+                  <div key={f.id} className={`p-4 rounded-xl border relative group overflow-hidden ${f.severity === 'CRITICAL' ? 'bg-red-500/10 border-red-500/20 text-red-100' : 'bg-amber-500/10 border-amber-500/20 text-amber-100'
                     }`}>
-                    <p className="font-semibold">{f.anomalyType.replace(/_/g, ' ')}</p>
-                    <p className="mt-0.5 opacity-80">{f.description}</p>
+                    <div className="absolute top-0 right-0 w-8 h-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <AlertOctagon size={32} />
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">{f.anomalyType.replace(/_/g, ' ')}</p>
+                    <p className="mt-2 text-xs font-medium leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">{f.description}</p>
                   </div>
                 ))}
               </div>
             </Card>
           )}
 
-          {/* Audit timeline */}
+          {/* Audit Repository */}
           {timeline.length > 0 && (
             <Card>
-              <CardHeader title="Audit Timeline" />
-              <div className="space-y-0">
-                {timeline.slice(0, 8).map((e, i) => (
+              <CardHeader title="Node Timeline" subtitle="System modification log" />
+              <div className="space-y-1">
+                {timeline.slice(0, 5).map((e, i) => (
                   <TimelineEvent key={i} {...e} />
                 ))}
               </div>
+              <Button variant="ghost" size="sm" className="w-full mt-4 text-[10px] font-bold uppercase tracking-widest opacity-40 hover:opacity-100">
+                Full Audit Log
+              </Button>
             </Card>
           )}
         </div>
       </div>
 
-      {/* Revoke modal */}
-      <Modal open={modal === 'revoke'} onClose={() => setModal(null)} title="Revoke Exception" size="sm">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">This will revoke the exception and notify the requester. This action cannot be undone.</p>
-          <FormField label="Reason for Revocation">
+      {/* Revoke overlay */}
+      <Modal open={modal === 'revoke'} onClose={() => setModal(null)} title="Terminate Node Lease" size="sm">
+        <div className="space-y-6">
+          <p className="text-sm text-dark-text/60 font-medium">Warning: This action will immediately revoke the exception status and trigger departmental notification. This cannot be reversed.</p>
+          <FormField label="Revocation Rationale">
             <Textarea
               value={revokeReason}
               onChange={(e) => setRevokeReason(e.target.value)}
-              placeholder="Explain why this exception is being revoked…"
+              placeholder="Provide justification for architectural termination…"
             />
           </FormField>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancel</Button>
-            <Button variant="danger" size="sm" loading={actionLoading} onClick={handleRevoke}>Revoke Exception</Button>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setModal(null)}>Abort</Button>
+            <Button variant="danger" loading={actionLoading} onClick={handleRevoke}>Confirm Termination</Button>
           </div>
         </div>
       </Modal>
 
-      {/* Delete modal */}
-      <Modal open={modal === 'delete'} onClose={() => setModal(null)} title="Delete Exception" size="sm">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">Are you sure you want to permanently delete this draft exception?</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setModal(null)}>Cancel</Button>
-            <Button variant="danger" size="sm" loading={actionLoading} onClick={handleDelete}>Delete</Button>
+      {/* Delete overlay */}
+      <Modal open={modal === 'delete'} onClose={() => setModal(null)} title="Wipe Asset Record" size="sm">
+        <div className="space-y-6">
+          <p className="text-sm text-dark-text/60 font-medium">Are you sure you want to permanently erase this exception draft from the repository?</p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setModal(null)}>Cancel</Button>
+            <Button variant="danger" loading={actionLoading} onClick={handleDelete}>Wipe Asset</Button>
           </div>
         </div>
       </Modal>

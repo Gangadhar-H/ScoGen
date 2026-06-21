@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Users, FileText, Shield, Plus, Edit } from 'lucide-react'
+import { Users, FileText, Shield, Plus, Edit, Building } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
 import { lookupsApi } from '../api/lookups.js'
 import { useFetch } from '../hooks/useFetch.js'
@@ -154,84 +154,108 @@ export default function AdminPage() {
 
   const userColumns = [
     {
-      key: 'name', label: 'Name', render: (v, row) => (
-        <div>
-          <p className="text-xs font-medium text-slate-800">{v}</p>
-          <p className="text-[10px] text-slate-400">{row.email}</p>
+      key: 'name', label: 'Identity', render: (v, row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary-light font-display font-bold border border-white/5">
+            {v?.charAt(0)}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white tracking-tight">{v}</p>
+            <p className="text-[10px] text-dark-text/30 font-bold uppercase tracking-wider">{row.email}</p>
+          </div>
         </div>
       )
     },
-    { key: 'role', label: 'Role', render: (v) => <Badge color={v === 'ADMIN' ? 'red' : v === 'SECURITY_REVIEWER' ? 'purple' : 'blue'}>{ROLE_LABELS[v]}</Badge> },
-    { key: 'isActive', label: 'Status', render: (v) => <Badge color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Badge> },
-    { key: 'createdAt', label: 'Created', render: (v) => <span className="text-xs text-slate-400">{formatDate(v)}</span> },
+    { key: 'role', label: 'Access Level', render: (v) => <Badge color={v === 'ADMIN' ? 'red' : v === 'SECURITY_REVIEWER' ? 'accent' : 'secondary'}>{ROLE_LABELS[v]}</Badge> },
+    { key: 'isActive', label: 'Operational Status', render: (v) => <Badge color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Badge> },
+    { key: 'createdAt', label: 'Registry Date', render: (v) => <span className="text-xs text-dark-text/40 font-medium">{formatDate(v)}</span> },
     {
       key: 'id', label: '', render: (v, row) => (
-        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setUserModal(row) }}>
-          <Edit size={11} /> Edit
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setUserModal(row) }} className="hover:bg-white/5">
+          <Edit size={14} className="text-primary-light" />
+          <span className="ml-1 uppercase text-[10px] tracking-widest font-bold">Configure</span>
         </Button>
       )
     },
   ]
 
   const policyColumns = [
-    { key: 'policyCode', label: 'Code', render: (v) => <span className="font-mono text-xs text-brand-700">{v}</span> },
-    { key: 'title', label: 'Title', render: (v) => <span className="text-xs font-medium">{v}</span> },
-    { key: 'severity', label: 'Severity', render: (v) => <Badge color={v === 'HIGH' ? 'red' : v === 'MEDIUM' ? 'amber' : 'green'}>{v}</Badge> },
-    { key: 'description', label: 'Description', render: (v) => <span className="text-xs text-slate-500 truncate max-w-48 block">{v || '—'}</span> },
+    { key: 'policyCode', label: 'Protocol ID', render: (v) => <span className="font-mono text-[10px] font-bold text-primary-light bg-primary/10 px-2 py-1 rounded-md border border-primary/20">{v}</span> },
+    { key: 'title', label: 'Policy Signature', render: (v) => <span className="text-sm font-bold text-white tracking-tight">{v}</span> },
+    { key: 'severity', label: 'Criticality', render: (v) => <Badge color={v === 'HIGH' ? 'red' : v === 'MEDIUM' ? 'yellow' : 'green'}>{v}</Badge> },
+    { key: 'description', label: 'Scope Definition', render: (v) => <span className="text-xs text-dark-text/40 font-medium truncate max-w-sm block leading-relaxed">{v || 'Analytical scope undefined'}</span> },
   ]
 
   return (
-    <div className="space-y-5">
-      {/* System metrics */}
+    <div className="space-y-8 animate-fade-in">
+      {/* System Architecture Metrics */}
       {!metricsLoading && metrics && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Users" value={metrics.userCount} icon={Users} color="blue" />
-          <StatCard label="Total Exceptions" value={metrics.exceptionCount} icon={FileText} color="purple" />
-          <StatCard label="Active Exceptions" value={metrics.activeCount} icon={Shield} color="green" />
-          <StatCard label="Departments" value={metrics.departmentCount} icon={Shield} color="slate" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Network Users" value={metrics.userCount} icon={Users} color="primary" />
+          <StatCard label="Total Exception Nodes" value={metrics.exceptionCount} icon={FileText} color="secondary" />
+          <StatCard label="Active Governance Nodes" value={metrics.activeCount} icon={Shield} color="accent" />
+          <StatCard label="Functional Units" value={metrics.departmentCount} icon={Building} color="milk" />
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-          >
-            <t.icon size={13} />
-            {t.label}
-          </button>
-        ))}
+      {/* Structural Controls */}
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-1 bg-white/[0.02] p-1 rounded-2xl border border-white/5 self-start">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-[0.15em] transition-all ${tab === t.id
+                ? 'bg-gradient-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                : 'text-dark-text/30 hover:text-white hover:bg-white/5'
+                }`}
+            >
+              <t.icon size={16} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'users' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-display font-bold text-white tracking-tight">Identity Nexus</h2>
+                <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+                  Authorized personnel with cross-departmental access clearance
+                </p>
+              </div>
+              <Button variant="primary" size="md" onClick={() => setUserModal('create')}>
+                <Plus size={18} /> <span>Initialize Identity</span>
+              </Button>
+            </div>
+            <Card className="p-0">
+              <Table columns={userColumns} data={users} loading={usersLoading} empty="No validated identities found in this sector" />
+            </Card>
+          </div>
+        )}
+
+        {tab === 'policies' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-display font-bold text-white tracking-tight">Regulatory Protocols</h2>
+                <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest mt-1">
+                  Governance framework defining operational security boundaries
+                </p>
+              </div>
+              <Button variant="primary" size="md" onClick={() => setPolicyModal(true)}>
+                <Plus size={18} /> <span>Encode Protocol</span>
+              </Button>
+            </div>
+            <Card className="p-0">
+              <Table columns={policyColumns} data={policies} loading={false} empty="No governance protocols detected" />
+            </Card>
+          </div>
+        )}
       </div>
 
-      {tab === 'users' && (
-        <Card padding={false}>
-          <div className="flex items-center justify-between px-5 py-4">
-            <CardHeader title={`Users (${users.length})`} subtitle="Manage user accounts and roles" />
-            <Button variant="primary" size="sm" onClick={() => setUserModal('create')}>
-              <Plus size={12} /> Add User
-            </Button>
-          </div>
-          <Table columns={userColumns} data={users} loading={usersLoading} empty="No users found" />
-        </Card>
-      )}
-
-      {tab === 'policies' && (
-        <Card padding={false}>
-          <div className="flex items-center justify-between px-5 py-4">
-            <CardHeader title={`Policies (${policies.length})`} subtitle="Manage security policies" />
-            <Button variant="primary" size="sm" onClick={() => setPolicyModal(true)}>
-              <Plus size={12} /> Add Policy
-            </Button>
-          </div>
-          <Table columns={policyColumns} data={policies} loading={false} empty="No policies found" />
-        </Card>
-      )}
-
-      {/* Modals */}
+      {/* Configuration Overlays */}
       <UserModal
         open={!!userModal}
         onClose={() => setUserModal(null)}

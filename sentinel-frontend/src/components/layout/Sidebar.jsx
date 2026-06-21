@@ -53,61 +53,69 @@ export function Sidebar() {
   const items = NAV_ITEMS[user?.role] || []
 
   return (
-    <aside className={`flex flex-col bg-slate-900 text-slate-300 transition-all duration-200 flex-shrink-0 ${collapsed ? 'w-16' : 'w-60'}`}>
+    <aside className={`flex flex-col bg-dark-bg border-r border-dark-border/50 text-dark-text/70 transition-all duration-300 ease-in-out flex-shrink-0 ${collapsed ? 'w-20' : 'w-64'}`}>
       {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-700/50 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="flex-shrink-0 w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-          <Shield size={16} className="text-white" />
+      <div className={`flex items-center gap-3 px-6 py-8 ${collapsed ? 'justify-center px-0' : ''}`}>
+        <div className="flex-shrink-0 w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+          <Shield size={20} className="text-white" />
         </div>
         {!collapsed && (
-          <div>
-            <p className="text-sm font-bold text-white leading-none">SentinelGRC</p>
-            <p className="text-[10px] text-slate-400 mt-0.5 leading-none">Policy Management</p>
+          <div className="animate-fade-in">
+            <p className="text-lg font-display font-bold text-white tracking-tight leading-none">Sentinel</p>
+            <p className="text-[10px] uppercase tracking-widest text-primary-light font-semibold mt-1 opacity-80 leading-none">Intelligence</p>
           </div>
         )}
       </div>
 
       {/* Nav items */}
-      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
         {!collapsed && (
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            {ROLE_LABELS[user?.role] || 'Navigation'}
+          <p className="px-4 mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-dark-text/30">
+            {ROLE_LABELS[user?.role] || 'Menu'}
           </p>
         )}
         {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === '/exceptions' || item.to === '/dashboard'}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-brand-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-              } ${collapsed ? 'justify-center' : ''}`
+              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${isActive
+                ? 'bg-primary/10 text-primary-light shadow-[inset_0_0_20px_rgba(79,70,229,0.05)] border border-primary/20'
+                : 'hover:bg-white/5 hover:text-white border border-transparent'
+              } ${collapsed ? 'justify-center px-0' : ''}`
             }
             title={collapsed ? item.label : undefined}
           >
-            <item.icon size={16} className="flex-shrink-0" />
-            {!collapsed && item.label}
+            <item.icon size={18} className={`flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${collapsed ? '' : ''}`} />
+            {!collapsed && <span className="animate-fade-in">{item.label}</span>}
           </NavLink>
         ))}
       </nav>
 
-      {/* User info + collapse */}
-      <div className="border-t border-slate-700/50 p-3 space-y-2">
+      {/* User profile + collapse */}
+      <div className="p-4 space-y-4">
         {!collapsed && user && (
-          <div className="px-2 py-2 rounded-md bg-slate-800">
-            <p className="text-xs font-medium text-white truncate">{user.name}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{ROLE_LABELS[user.role]}</p>
+          <div className="px-4 py-4 rounded-2xl bg-dark-card/40 border border-dark-border/30 backdrop-blur-md animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                {user.name.charAt(0)}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-dark-text/40 font-medium truncate mt-0.5">{ROLE_LABELS[user.role]}</p>
+              </div>
+            </div>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-end'} px-2 py-1.5 text-slate-500 hover:text-slate-300 rounded-md hover:bg-slate-800 transition-colors`}
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4 text-xs font-semibold uppercase tracking-wider'} py-2.5 text-dark-text/40 hover:text-white rounded-xl hover:bg-white/5 transition-all group`}
         >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {!collapsed && <span>Collapse</span>}
+          {collapsed ? <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" /> : <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />}
         </button>
       </div>
-    </aside>
+    </aside >
   )
 }
