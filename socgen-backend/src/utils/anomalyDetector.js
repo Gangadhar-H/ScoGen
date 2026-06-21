@@ -23,6 +23,8 @@ async function detectAnomalies() {
       exceptionTypeId: true,
       departmentId: true,
       systemAffected: true,
+      riskLevel: true,
+      riskScore: true,
     },
   });
 
@@ -114,6 +116,40 @@ async function detectAnomalies() {
         anomalyType: "REPEATED_EXCEPTION",
         severity: "WARNING",
         description: `This exception type has been requested ${group.length} times for the same system ("${mostRecent.systemAffected}"). Consider a permanent policy change instead of repeated exceptions.`,
+      });
+    }
+  }
+
+  // Rule 7: HIGH-risk exception that's been active long-term — risk is
+  // accumulating without anyone re-reviewing it.
+  for (const e of exceptions) {
+    if (
+      e.status === "ACTIVE" &&
+      e.riskLevel === "HIGH" &&
+      e.startDate &&
+      e.expiryDate
+    ) {
+      const days = Math.ceil((e.expiryDate - e.startDate) / DAY_MS);
+      if (days > 180) {
+        flags.push({
+          exceptionId: e.id,
+          anomalyType: "HIGH_RISK_LONG_EXCEPTION",
+          severity: "WARNING",
+          description: `HIGH risk exception (score ${e.riskScore}) has been active for a ${days}-day window without re-review.`,
+        });
+      }
+    }
+  }
+
+  // Rule 8: CRITICAL-risk exception currently ACTIVE — immediate escalation,
+  // regardless of how long it's been open.
+  for (const e of exceptions) {
+    if (e.status === "ACTIVE" && e.riskLevel === "CRITICAL") {
+      flags.push({
+        exceptionId: e.id,
+        anomalyType: "CRITICAL_RISK_EXCEPTION",
+        severity: "CRITICAL",
+        description: `Exception carries CRITICAL risk (score ${e.riskScore}) while ACTIVE — requires immediate security review.`,
       });
     }
   }

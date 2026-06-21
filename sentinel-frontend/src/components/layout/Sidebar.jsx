@@ -61,8 +61,8 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="animate-fade-in">
-            <p className="text-lg font-display font-bold text-white tracking-tight leading-none">Sentinel</p>
-            <p className="text-[10px] uppercase tracking-widest text-primary-light font-semibold mt-1 opacity-80 leading-none">Intelligence</p>
+            <p className="text-lg font-display font-bold text-white tracking-tight leading-none">Exceptra</p>
+            <p className="text-[10px] uppercase tracking-widest text-primary-light font-semibold mt-1 opacity-80 leading-none"></p>
           </div>
         )}
       </div>

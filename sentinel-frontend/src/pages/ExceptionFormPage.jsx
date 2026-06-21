@@ -26,6 +26,7 @@ export default function ExceptionFormPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
   const [previewScore, setPreviewScore] = useState(null)
+  const [previewDuration, setPreviewDuration] = useState(null)
   const [advisorSuggestion, setAdvisorSuggestion] = useState(null)
   const [advisorLoading, setAdvisorLoading] = useState(false)
   const getRisk = (score) => {
@@ -79,8 +80,10 @@ export default function ExceptionFormPage() {
       const dur = days <= 30 ? 10 : days <= 90 ? 25 : days <= 180 ? 40 : 50
       const score = Math.min(100, Math.max(0, type.baseRiskScore + dur))
       setPreviewScore(score)
+      setPreviewDuration({ days, durationRisk: dur })
     } else {
       setPreviewScore(null)
+      setPreviewDuration(null)
     }
   }, [form.exceptionTypeId, form.startDate, form.expiryDate, types])
 
@@ -250,7 +253,11 @@ export default function ExceptionFormPage() {
               {previewScore !== null && (
                 <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-dark-text/30 uppercase tracking-widest">Analytical Risk Projection</p>
+                    <p className="text-[9px] text-dark-text/20 uppercase tracking-tighter mt-0.5">
+                      {previewDuration
+                        ? `${previewDuration.days}-day window · duration tier +${previewDuration.durationRisk} (next tier at ${previewDuration.days <= 30 ? 31 : previewDuration.days <= 90 ? 91 : previewDuration.days <= 180 ? 181 : '∞'} days)`
+                        : 'Automated calculation based on type/duration vectors'}
+                    </p>
                     <p className="text-[9px] text-dark-text/20 uppercase tracking-tighter mt-0.5">Automated calculation based on type/duration vectors</p>
                   </div>
                   <div className="flex items-center gap-4">

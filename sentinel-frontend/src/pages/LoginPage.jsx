@@ -134,7 +134,7 @@ export default function LoginPage() {
           <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center">
             <Shield size={18} className="text-white" />
           </div>
-          <span className="text-lg font-bold text-white">SentinelGRC</span>
+          <span className="text-lg font-bold text-white">Exceptra</span>
         </div>
 
         <div>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, CheckSquare, AlertOctagon } from 'lucide-react'
+import { ShieldCheck, ShieldAlert, ShieldX, RefreshCw, CheckSquare, AlertOctagon, AlertTriangle } from 'lucide-react'
 import { Card } from '../ui/Card.jsx'
 import { Button } from '../ui/Button.jsx'
 
@@ -85,6 +85,9 @@ export function DepartmentScoreCard({ dept }) {
                 <FactorRow icon={CheckSquare} label="Decision Quality"
                     detail={`${breakdown.approvalQuality.reworkCount} policy reworks`}
                     penalty={breakdown.approvalQuality.penalty} />
+                <FactorRow icon={AlertTriangle} label="Audit Findings"
+                    detail={`${breakdown.auditFindings.count} unresolved anomaly flag${breakdown.auditFindings.count !== 1 ? 's' : ''}`}
+                    penalty={breakdown.auditFindings.penalty} />
             </div>
         </Card>
     )
