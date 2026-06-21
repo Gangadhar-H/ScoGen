@@ -11,7 +11,7 @@ import { Download } from 'lucide-react'
 
 const ACTIONS = ['LOGIN', 'REGISTER', 'CREATE_EXCEPTION', 'UPDATE_EXCEPTION', 'DELETE_EXCEPTION',
   'SUBMIT_FOR_REVIEW', 'APPROVE', 'REJECT', 'REQUEST_INFO', 'REVOKE', 'EMERGENCY_REVOKE',
-  'RENEW', 'OVERRIDE_RISK_SCORE', 'CREATE_USER', 'UPDATE_USER']
+  'RENEW', 'OVERRIDE_RISK_SCORE', 'CREATE_USER', 'UPDATE_USER', 'ADVISOR_SUGGESTION_SHOWN']
 
 export default function AuditLogsPage() {
   const [page, setPage] = useState(1)
@@ -32,19 +32,19 @@ export default function AuditLogsPage() {
   }
 
   // Add this handler inside the component, near setFilter:
-async function handleExportPdf() {
-  const token = localStorage.getItem('sentinel_token')
-  const res = await fetch(auditApi.exportPdfUrl({ action: filters.action, startDate: filters.startDate, endDate: filters.endDate }), {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'audit-trail.pdf'
-  a.click()
-  URL.revokeObjectURL(url)
-}
+  async function handleExportPdf() {
+    const token = localStorage.getItem('sentinel_token')
+    const res = await fetch(auditApi.exportPdfUrl({ action: filters.action, startDate: filters.startDate, endDate: filters.endDate }), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'audit-trail.pdf'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const columns = [
     {
@@ -67,12 +67,11 @@ async function handleExportPdf() {
       key: 'action',
       label: 'Action',
       render: (v) => (
-        <span className={`font-mono text-xs px-2 py-0.5 rounded ${
-          v?.includes('DELETE') || v?.includes('REVOKE') || v?.includes('REJECT') ? 'bg-red-50 text-red-700' :
-          v?.includes('APPROVE') || v?.includes('ACTIVE') ? 'bg-green-50 text-green-700' :
-          v?.includes('CREATE') || v?.includes('SUBMIT') ? 'bg-blue-50 text-blue-700' :
-          'bg-slate-50 text-slate-600'
-        }`}>
+        <span className={`font-mono text-xs px-2 py-0.5 rounded ${v?.includes('DELETE') || v?.includes('REVOKE') || v?.includes('REJECT') ? 'bg-red-50 text-red-700' :
+            v?.includes('APPROVE') || v?.includes('ACTIVE') ? 'bg-green-50 text-green-700' :
+              v?.includes('CREATE') || v?.includes('SUBMIT') ? 'bg-blue-50 text-blue-700' :
+                'bg-slate-50 text-slate-600'
+          }`}>
           {v}
         </span>
       )
@@ -104,8 +103,8 @@ async function handleExportPdf() {
           <SlidersHorizontal size={12} /> Filters {(filters.action || filters.startDate) ? '•' : ''}
         </Button>
         <Button variant="secondary" size="sm" onClick={handleExportPdf}>
-  <Download size={12} /> Export PDF
-</Button>
+          <Download size={12} /> Export PDF
+        </Button>
       </div>
 
       {showFilters && (

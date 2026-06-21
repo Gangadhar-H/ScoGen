@@ -45,4 +45,10 @@ router.get(
   ctrl.policyEffectiveness
 );
 
+router.get(
+  "/governance-score",
+  requireRole("SECURITY_REVIEWER", "AUDITOR", "ADMIN"),
+  ctrl.governanceScore
+);
+
 module.exports = router;

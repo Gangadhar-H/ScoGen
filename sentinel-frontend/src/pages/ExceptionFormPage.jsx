@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, AlertCircle } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Sparkles, TrendingDown, Loader2 } from 'lucide-react'
 import { exceptionsApi } from '../api/exceptions.js'
 import { lookupsApi } from '../api/lookups.js'
+import { advisorApi } from '../api/advisor.js'
 import { Card, CardHeader } from '../components/ui/Card.jsx'
 import { Button } from '../components/ui/Button.jsx'
 import { FormField, Input, Select, Textarea } from '../components/ui/Form.jsx'
@@ -32,6 +33,8 @@ export default function ExceptionFormPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
   const [previewScore, setPreviewScore] = useState(null)
+  const [advisorSuggestion, setAdvisorSuggestion] = useState(null)   // ← add this
+  const [advisorLoading, setAdvisorLoading] = useState(false)        // ← add this
 
   useEffect(() => {
     async function load() {
@@ -81,6 +84,48 @@ export default function ExceptionFormPage() {
       setPreviewScore(null)
     }
   }, [form.exceptionTypeId, form.startDate, form.expiryDate, types])
+
+
+  // AI Governance Advisor — Gemini reasons over the actual request context
+  // (justification, system, type) and proposes a safer alternative.
+  // Risk numbers are still computed by our own deterministic risk engine.
+  useEffect(() => {
+    if (!form.exceptionTypeId) {
+      setAdvisorSuggestion(null)
+      return
+    }
+    // Don't burn API calls until there's enough context to reason about
+    if (!form.businessJustification || form.businessJustification.trim().length < 15) {
+      setAdvisorSuggestion(null)
+      return
+    }
+    const timer = setTimeout(async () => {
+      setAdvisorLoading(true)
+      try {
+        const res = await advisorApi.suggest({
+          exceptionTypeId: form.exceptionTypeId,
+          title: form.title,
+          businessJustification: form.businessJustification,
+          systemAffected: form.systemAffected,
+          startDate: form.startDate || null,
+          expiryDate: form.expiryDate || null,
+        })
+        setAdvisorSuggestion(res.hasSuggestion ? res : null)
+      } catch {
+        setAdvisorSuggestion(null)
+      } finally {
+        setAdvisorLoading(false)
+      }
+    }, 900) // longer debounce — this hits a live LLM call now, not a lookup table
+    return () => clearTimeout(timer)
+  }, [form.exceptionTypeId, form.startDate, form.expiryDate, form.businessJustification, form.title, form.systemAffected])
+
+  function applyAdvisorSuggestion() {
+    if (!advisorSuggestion?.alternative) return
+    set('startDate', new Date(advisorSuggestion.alternative.startDate).toISOString().slice(0, 10))
+    set('expiryDate', new Date(advisorSuggestion.alternative.expiryDate).toISOString().slice(0, 10))
+    setAdvisorSuggestion(null)
+  }
 
   function set(key, val) {
     setForm(prev => ({ ...prev, [key]: val }))
@@ -203,6 +248,35 @@ export default function ExceptionFormPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold font-mono text-slate-800">{previewScore}</span>
                   <RiskBadge level={getRisk(previewScore)} />
+                </div>
+              </div>
+            </div>
+          )}
+          {advisorLoading && !advisorSuggestion && (
+            <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center gap-2 text-xs text-indigo-600">
+              <Loader2 size={12} className="animate-spin" /> Asking the AI Governance Advisor…
+            </div>
+          )}
+
+          {advisorSuggestion && (
+            <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <Sparkles size={14} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-indigo-900">AI Governance Advisor</p>
+                  <p className="text-xs text-indigo-700 mt-1">{advisorSuggestion.alternative.rationale}</p>
+                  <div className="flex items-center gap-4 mt-2 flex-wrap">
+                    <span className="text-sm font-bold text-indigo-900">{advisorSuggestion.alternative.label}</span>
+                    <span className="text-xs text-indigo-600">{advisorSuggestion.alternative.durationDays} Days</span>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-green-700">
+                      <TrendingDown size={12} /> Reduces Risk by {advisorSuggestion.alternative.riskReductionPercent}%
+                    </span>
+                  </div>
+                  <Button variant="primary" size="sm" className="mt-3" onClick={applyAdvisorSuggestion}>
+                    Apply Suggestion
+                  </Button>
                 </div>
               </div>
             </div>

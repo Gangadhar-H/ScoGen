@@ -1,6 +1,10 @@
 const prisma = require("../prismaClient");
 const asyncHandler = require("../utils/asyncHandler");
-const { detectAnomalies } = require("../utils/anomalyDetector");
+const { buildReportPdf } = require("../utils/pdfGenerator");
+const {
+  computeGovernanceScore,
+  gradeFor,
+} = require("../utils/governanceScoring");
 
 // GET /api/reports/active-exceptions
 const activeExceptions = asyncHandler(async (req, res) => {
@@ -100,7 +104,12 @@ const complianceImpact = asyncHandler(async (req, res) => {
       : {},
     include: {
       exceptionTypes: {
-        include: { exceptionType: { include: { exceptions: true } } },
+        include: {
+          exceptionType: {
+            // _count instead of fetching every exception row just to count them
+            include: { _count: { select: { exceptions: true } } },
+          },
+        },
       },
     },
   });
@@ -110,7 +119,7 @@ const complianceImpact = asyncHandler(async (req, res) => {
       (j) => j.exceptionType.name
     );
     const exceptionCount = f.exceptionTypes.reduce(
-      (sum, j) => sum + j.exceptionType.exceptions.length,
+      (sum, j) => sum + j.exceptionType._count.exceptions,
       0
     );
     return {
@@ -138,7 +147,7 @@ const dashboard = asyncHandler(async (req, res) => {
     expiringSoon,
     pendingApprovals,
     highRiskCount,
-    anomalies,
+    anomalyCount,
   ] = await Promise.all([
     prisma.exception.count({ where: { ...where, status: "ACTIVE" } }),
     prisma.exception.count({
@@ -152,7 +161,9 @@ const dashboard = asyncHandler(async (req, res) => {
     prisma.exception.count({
       where: { ...where, riskLevel: { in: ["HIGH", "CRITICAL"] } },
     }),
-    detectAnomalies(),
+    // Read the persisted, hourly-refreshed flags instead of re-running the
+    // full anomaly scan on every dashboard load.
+    prisma.anomalyFlag.count({ where: { isResolved: false } }),
   ]);
 
   res.json({
@@ -160,11 +171,9 @@ const dashboard = asyncHandler(async (req, res) => {
     expiringSoon,
     pendingApprovals,
     highRiskCount,
-    anomalyCount: anomalies.length,
+    anomalyCount,
   });
 });
-
-const { buildReportPdf } = require("../utils/pdfGenerator");
 
 // GET /api/reports/export/pdf?type=active|expired|critical
 const exportReportPdf = asyncHandler(async (req, res) => {
@@ -252,7 +261,78 @@ const policyEffectiveness = asyncHandler(async (req, res) => {
   res.json({ data: result });
 });
 
-// Update module.exports:
+// GET /api/reports/governance-score
+const governanceScore = asyncHandler(async (req, res) => {
+  const [departments, allExceptions, allApprovals, liveAnomalyFlags] =
+    await Promise.all([
+      prisma.department.findMany({ orderBy: { name: "asc" } }),
+      prisma.exception.findMany({
+        select: {
+          id: true,
+          departmentId: true,
+          status: true,
+          renewalCount: true,
+        },
+      }),
+      prisma.approval.findMany({
+        select: { exceptionId: true, decision: true },
+      }),
+      // Read persisted (hourly-refreshed) flags rather than re-running detectAnomalies() live
+      prisma.anomalyFlag.findMany({
+        where: { isResolved: false },
+        select: { exceptionId: true, severity: true },
+      }),
+    ]);
+
+  const exceptionsByDept = {};
+  for (const e of allExceptions)
+    (exceptionsByDept[e.departmentId] ||= []).push(e);
+
+  const exceptionToDept = Object.fromEntries(
+    allExceptions.map((e) => [e.id, e.departmentId])
+  );
+
+  const approvalsByDept = {};
+  for (const a of allApprovals) {
+    const deptId = exceptionToDept[a.exceptionId];
+    if (deptId) (approvalsByDept[deptId] ||= []).push(a);
+  }
+
+  const flagsByDept = {};
+  for (const f of liveAnomalyFlags) {
+    const deptId = exceptionToDept[f.exceptionId];
+    if (deptId) (flagsByDept[deptId] ||= []).push(f);
+  }
+
+  const departmentScores = departments.map((dept) => {
+    const exceptions = exceptionsByDept[dept.id] || [];
+    const approvals = approvalsByDept[dept.id] || [];
+    const anomalyFlags = flagsByDept[dept.id] || [];
+    const result = computeGovernanceScore({
+      exceptions,
+      approvals,
+      anomalyFlags,
+    });
+    return {
+      departmentId: dept.id,
+      departmentName: dept.name,
+      totalExceptions: exceptions.length,
+      ...result,
+    };
+  });
+
+  const scored = departmentScores.filter((d) => d.totalExceptions > 0);
+  const organizationScore = scored.length
+    ? Math.round(scored.reduce((sum, d) => sum + d.score, 0) / scored.length)
+    : 100;
+
+  res.json({
+    organizationScore,
+    organizationGrade: gradeFor(organizationScore),
+    departments: departmentScores,
+  });
+});
+
 module.exports = {
   activeExceptions,
   expiredExceptions,
@@ -262,4 +342,5 @@ module.exports = {
   dashboard,
   exportReportPdf,
   policyEffectiveness,
+  governanceScore,
 };

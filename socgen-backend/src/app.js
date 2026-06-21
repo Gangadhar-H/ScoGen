@@ -13,6 +13,7 @@ const reportRoutes = require("./routes/reports.routes");
 const auditLogRoutes = require("./routes/auditLogs.routes");
 const adminRoutes = require("./routes/admin.routes");
 const lookupRoutes = require("./routes/lookups.routes");
+const advisorRoutes = require("./routes/advisor.routes"); // ← add this line
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/audit-logs", authMiddleware, auditLogRoutes);
 app.use("/api/admin", authMiddleware, adminRoutes);
 app.use("/api/lookups", authMiddleware, lookupRoutes);
+app.use("/api/advisor", authMiddleware, advisorRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 

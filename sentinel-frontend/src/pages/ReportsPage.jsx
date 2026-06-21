@@ -2,7 +2,8 @@
 
 // REPLACE WITH (adds Download icon + Button import):
 import React, { useState, useEffect } from 'react'
-import { BarChart3, FileText, AlertTriangle, Building, Shield, Download } from 'lucide-react'
+import { BarChart3, FileText, AlertTriangle, Building, Shield, Download, ShieldCheck } from 'lucide-react'
+import { DepartmentScoreCard, GovernanceScoreSummary } from '../components/charts/GovernanceScoreCard.jsx'
 import { reportsApi } from '../api/reports.js'
 import { Card, CardHeader } from '../components/ui/Card.jsx'
 import { Button } from '../components/ui/Button.jsx'
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'department', label: 'By Department', icon: Building },
   { id: 'compliance', label: 'Compliance', icon: Shield },
   { id: 'policy', label: 'Policy Effectiveness', icon: AlertTriangle },
+  { id: 'governance', label: 'Governance Score', icon: ShieldCheck }, // NEW
 ]
 
 export default function ReportsPage() {
@@ -75,6 +77,9 @@ export default function ReportsPage() {
         } else if (tab === 'policy') {
           const res = await reportsApi.policyEffectiveness()
           setData({ policy: res.data })
+        } else if (tab === 'governance') {           // NEW
+          const res = await reportsApi.governanceScore()
+          setData({ governance: res })
         }
       } catch { }
       finally {
@@ -305,6 +310,20 @@ export default function ReportsPage() {
                 </table>
               </div>
             </Card>
+          )}
+
+          {tab === 'governance' && data.governance && (
+            <div className="space-y-5">
+              <GovernanceScoreSummary
+                score={data.governance.organizationScore}
+                grade={data.governance.organizationGrade}
+              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {data.governance.departments.map((dept) => (
+                  <DepartmentScoreCard key={dept.departmentId} dept={dept} />
+                ))}
+              </div>
+            </div>
           )}
         </>
       )}

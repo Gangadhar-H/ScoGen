@@ -29,6 +29,7 @@ function UserModal({ open, onClose, user, departments, onSave }) {
         await adminApi.createUser(form)
       }
       onSave()
+      lookupsApi.invalidate('policies')
       onClose()
     } catch (e) {
       setError(e.message)
@@ -152,20 +153,24 @@ export default function AdminPage() {
   const depts = departments || []
 
   const userColumns = [
-    { key: 'name', label: 'Name', render: (v, row) => (
-      <div>
-        <p className="text-xs font-medium text-slate-800">{v}</p>
-        <p className="text-[10px] text-slate-400">{row.email}</p>
-      </div>
-    )},
+    {
+      key: 'name', label: 'Name', render: (v, row) => (
+        <div>
+          <p className="text-xs font-medium text-slate-800">{v}</p>
+          <p className="text-[10px] text-slate-400">{row.email}</p>
+        </div>
+      )
+    },
     { key: 'role', label: 'Role', render: (v) => <Badge color={v === 'ADMIN' ? 'red' : v === 'SECURITY_REVIEWER' ? 'purple' : 'blue'}>{ROLE_LABELS[v]}</Badge> },
     { key: 'isActive', label: 'Status', render: (v) => <Badge color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Badge> },
     { key: 'createdAt', label: 'Created', render: (v) => <span className="text-xs text-slate-400">{formatDate(v)}</span> },
-    { key: 'id', label: '', render: (v, row) => (
-      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setUserModal(row) }}>
-        <Edit size={11} /> Edit
-      </Button>
-    )},
+    {
+      key: 'id', label: '', render: (v, row) => (
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setUserModal(row) }}>
+          <Edit size={11} /> Edit
+        </Button>
+      )
+    },
   ]
 
   const policyColumns = [
@@ -193,9 +198,8 @@ export default function AdminPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
           >
             <t.icon size={13} />
             {t.label}

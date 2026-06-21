@@ -18,6 +18,7 @@ import {
 } from '../components/charts/Charts.jsx'
 import { reportsApi as rApi } from '../api/reports.js'
 import { formatDate } from '../utils/format.js'
+import { GovernanceScoreSummary } from '../components/charts/GovernanceScoreCard.jsx'
 
 export default function DashboardPage() {
   const { user, hasRole } = useAuth()
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const [activeData, setActiveData] = useState(null)
   const [adminMetrics, setAdminMetrics] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [govScore, setGovScore] = useState(null)
 
   const canSeeReports = hasRole('ADMIN', 'SECURITY_REVIEWER', 'AUDITOR', 'APPROVER')
   const isAdmin = hasRole('ADMIN')
@@ -44,6 +46,7 @@ export default function DashboardPage() {
           promises.push(rApi.departmentWise())
           promises.push(rApi.complianceImpact())
           promises.push(rApi.active())
+          promises.push(rApi.governanceScore())
         }
         if (isAdmin) {
           promises.push(adminApi.metrics())
@@ -57,9 +60,10 @@ export default function DashboardPage() {
           if (results[2]?.status === 'fulfilled') setDeptData(results[2].value?.data)
           if (results[3]?.status === 'fulfilled') setComplianceData(results[3].value?.data || [])
           if (results[4]?.status === 'fulfilled') setActiveData(results[4].value)
+          if (results[5]?.status === 'fulfilled') setGovScore(results[5].value)   // NEW
         }
-        if (isAdmin && results[canSeeReports ? 5 : 1]?.status === 'fulfilled') {
-          setAdminMetrics(results[canSeeReports ? 5 : 1].value)
+        if (isAdmin && results[canSeeReports ? 6 : 1]?.status === 'fulfilled') {   // index shifted 5→6
+          setAdminMetrics(results[canSeeReports ? 6 : 1].value)
         }
       } finally {
         setLoading(false)
@@ -69,12 +73,14 @@ export default function DashboardPage() {
   }, [])
 
   const exceptionColumns = [
-    { key: 'title', label: 'Exception', render: (v, row) => (
-      <div>
-        <p className="font-medium text-slate-900 text-xs truncate max-w-48">{v}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">{row.department?.name}</p>
-      </div>
-    )},
+    {
+      key: 'title', label: 'Exception', render: (v, row) => (
+        <div>
+          <p className="font-medium text-slate-900 text-xs truncate max-w-48">{v}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{row.department?.name}</p>
+        </div>
+      )
+    },
     { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
     { key: 'riskLevel', label: 'Risk', render: (v) => <RiskBadge level={v} /> },
     { key: 'expiryDate', label: 'Expires', render: (v) => <span className="text-xs text-slate-500">{formatDate(v)}</span> },
@@ -166,6 +172,10 @@ export default function DashboardPage() {
             <p className="text-xs text-red-600 mt-0.5">Review exceptions for potential policy violations</p>
           </div>
         </div>
+      )}
+
+      {canSeeReports && govScore && (
+        <GovernanceScoreSummary score={govScore.organizationScore} grade={govScore.organizationGrade} />
       )}
 
       {/* Charts row */}
